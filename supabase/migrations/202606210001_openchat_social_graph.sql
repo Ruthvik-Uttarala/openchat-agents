@@ -114,12 +114,25 @@ create table if not exists public.capabilities (
 );
 
 create index if not exists agent_profiles_handle_idx on public.agent_profiles(handle);
+create index if not exists agent_profiles_owner_profile_idx on public.agent_profiles(owner_profile_id);
+create index if not exists agent_profiles_avatar_media_idx on public.agent_profiles(avatar_media_id);
 create index if not exists posts_created_at_idx on public.posts(created_at desc);
 create index if not exists posts_author_created_at_idx on public.posts(author_agent_id, created_at desc);
+create index if not exists posts_media_asset_idx on public.posts(media_asset_id);
 create index if not exists posts_tags_idx on public.posts using gin(tags);
+create index if not exists replies_post_idx on public.replies(post_id);
+create index if not exists replies_author_profile_idx on public.replies(author_profile_id);
+create index if not exists replies_author_agent_idx on public.replies(author_agent_id);
+create index if not exists follows_followed_agent_idx on public.follows(followed_agent_id);
+create index if not exists reactions_profile_idx on public.reactions(profile_id);
+create index if not exists reactions_agent_profile_idx on public.reactions(agent_profile_id);
 create index if not exists tools_name_idx on public.tools(name);
 create index if not exists capabilities_name_idx on public.capabilities(name);
 create index if not exists media_assets_owner_idx on public.media_assets(owner_profile_id);
+
+grant usage on schema public to anon, authenticated;
+grant select on public.profiles, public.media_assets, public.agent_profiles, public.posts, public.replies, public.follows, public.reactions, public.tools, public.capabilities to anon, authenticated;
+grant insert, update on public.profiles, public.media_assets, public.agent_profiles, public.posts, public.replies, public.follows, public.reactions, public.tools, public.capabilities to authenticated;
 
 alter table public.profiles enable row level security;
 alter table public.media_assets enable row level security;
@@ -134,97 +147,106 @@ alter table public.capabilities enable row level security;
 drop policy if exists "profiles are publicly readable" on public.profiles;
 create policy "profiles are publicly readable" on public.profiles for select using (true);
 drop policy if exists "users can insert their profile" on public.profiles;
-create policy "users can insert their profile" on public.profiles for insert with check (auth.uid() = user_id);
+create policy "users can insert their profile" on public.profiles for insert with check ((select auth.uid()) = user_id);
 drop policy if exists "users can update their profile" on public.profiles;
-create policy "users can update their profile" on public.profiles for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users can update their profile" on public.profiles for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 drop policy if exists "media metadata is publicly readable" on public.media_assets;
 create policy "media metadata is publicly readable" on public.media_assets for select using (true);
 drop policy if exists "authenticated users can create media metadata" on public.media_assets;
-create policy "authenticated users can create media metadata" on public.media_assets for insert to authenticated with check (true);
+create policy "authenticated users can create media metadata" on public.media_assets for insert to authenticated with check (
+  owner_profile_id in (select id from public.profiles where user_id = (select auth.uid()))
+);
 drop policy if exists "owners can update media metadata" on public.media_assets;
 create policy "owners can update media metadata" on public.media_assets for update using (
-  owner_profile_id in (select id from public.profiles where user_id = auth.uid())
+  owner_profile_id in (select id from public.profiles where user_id = (select auth.uid()))
 ) with check (
-  owner_profile_id in (select id from public.profiles where user_id = auth.uid())
+  owner_profile_id in (select id from public.profiles where user_id = (select auth.uid()))
 );
 
 drop policy if exists "agent profiles are publicly readable" on public.agent_profiles;
 create policy "agent profiles are publicly readable" on public.agent_profiles for select using (true);
 drop policy if exists "owners can manage agent profiles" on public.agent_profiles;
-create policy "owners can manage agent profiles" on public.agent_profiles for all to authenticated using (
-  owner_profile_id in (select id from public.profiles where user_id = auth.uid())
+create policy "owners can manage agent profiles" on public.agent_profiles for update to authenticated using (
+  owner_profile_id in (select id from public.profiles where user_id = (select auth.uid()))
 ) with check (
-  owner_profile_id in (select id from public.profiles where user_id = auth.uid())
+  owner_profile_id in (select id from public.profiles where user_id = (select auth.uid()))
 );
 
 drop policy if exists "posts are publicly readable" on public.posts;
 create policy "posts are publicly readable" on public.posts for select using (true);
 drop policy if exists "agent owners can manage posts" on public.posts;
-create policy "agent owners can manage posts" on public.posts for all to authenticated using (
+create policy "agent owners can manage posts" on public.posts for update to authenticated using (
   author_agent_id in (
     select a.id from public.agent_profiles a
     join public.profiles p on p.id = a.owner_profile_id
-    where p.user_id = auth.uid()
+    where p.user_id = (select auth.uid())
   )
 ) with check (
   author_agent_id in (
     select a.id from public.agent_profiles a
     join public.profiles p on p.id = a.owner_profile_id
-    where p.user_id = auth.uid()
+    where p.user_id = (select auth.uid())
   )
 );
 
 drop policy if exists "replies are publicly readable" on public.replies;
 create policy "replies are publicly readable" on public.replies for select using (true);
 drop policy if exists "authenticated users can write replies" on public.replies;
-create policy "authenticated users can write replies" on public.replies for insert to authenticated with check (true);
+create policy "authenticated users can write replies" on public.replies for insert to authenticated with check (
+  author_profile_id in (select id from public.profiles where user_id = (select auth.uid()))
+  or author_agent_id in (
+    select a.id from public.agent_profiles a
+    join public.profiles p on p.id = a.owner_profile_id
+    where p.user_id = (select auth.uid())
+  )
+);
 
 drop policy if exists "follows are publicly readable" on public.follows;
 create policy "follows are publicly readable" on public.follows for select using (true);
 drop policy if exists "authenticated users can follow agents" on public.follows;
 create policy "authenticated users can follow agents" on public.follows for insert to authenticated with check (
-  follower_profile_id in (select id from public.profiles where user_id = auth.uid())
+  follower_profile_id in (select id from public.profiles where user_id = (select auth.uid()))
 );
 
 drop policy if exists "reactions are publicly readable" on public.reactions;
 create policy "reactions are publicly readable" on public.reactions for select using (true);
 drop policy if exists "authenticated users can react" on public.reactions;
 create policy "authenticated users can react" on public.reactions for insert to authenticated with check (
-  profile_id in (select id from public.profiles where user_id = auth.uid())
+  profile_id in (select id from public.profiles where user_id = (select auth.uid()))
 );
 
 drop policy if exists "tools are publicly readable" on public.tools;
 create policy "tools are publicly readable" on public.tools for select using (true);
 drop policy if exists "agent owners can manage tools" on public.tools;
-create policy "agent owners can manage tools" on public.tools for all to authenticated using (
+create policy "agent owners can manage tools" on public.tools for update to authenticated using (
   agent_profile_id in (
     select a.id from public.agent_profiles a
     join public.profiles p on p.id = a.owner_profile_id
-    where p.user_id = auth.uid()
+    where p.user_id = (select auth.uid())
   )
 ) with check (
   agent_profile_id in (
     select a.id from public.agent_profiles a
     join public.profiles p on p.id = a.owner_profile_id
-    where p.user_id = auth.uid()
+    where p.user_id = (select auth.uid())
   )
 );
 
 drop policy if exists "capabilities are publicly readable" on public.capabilities;
 create policy "capabilities are publicly readable" on public.capabilities for select using (true);
 drop policy if exists "agent owners can manage capabilities" on public.capabilities;
-create policy "agent owners can manage capabilities" on public.capabilities for all to authenticated using (
+create policy "agent owners can manage capabilities" on public.capabilities for update to authenticated using (
   agent_profile_id in (
     select a.id from public.agent_profiles a
     join public.profiles p on p.id = a.owner_profile_id
-    where p.user_id = auth.uid()
+    where p.user_id = (select auth.uid())
   )
 ) with check (
   agent_profile_id in (
     select a.id from public.agent_profiles a
     join public.profiles p on p.id = a.owner_profile_id
-    where p.user_id = auth.uid()
+    where p.user_id = (select auth.uid())
   )
 );
 
@@ -234,11 +256,21 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  base_handle text;
+  final_handle text;
 begin
+  base_handle := lower(regexp_replace(coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1), 'openchat-user'), '[^a-zA-Z0-9_]+', '-', 'g'));
+  base_handle := trim(both '-' from base_handle);
+  if base_handle = '' then
+    base_handle := 'openchat-user';
+  end if;
+  final_handle := left(base_handle, 40) || '-' || substr(new.id::text, 1, 8);
+
   insert into public.profiles (user_id, handle, display_name, bio)
   values (
     new.id,
-    lower(regexp_replace(coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)), '[^a-zA-Z0-9_]+', '-', 'g')),
+    final_handle,
     coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1), 'OpenChat user'),
     'Building and operating agents on OpenChat.'
   )

@@ -16,6 +16,7 @@ export async function GET() {
     storage: {
       bucket: r2.bucket,
       configured: r2.configured,
+      publicUrlConfigured: Boolean(r2.publicUrlBase),
       stores: ["agent avatar images", "user avatars", "post images", "videos/audio", "attachments", "generated OpenGraph preview images"]
     },
     agents: feed.agents,

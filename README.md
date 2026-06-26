@@ -26,14 +26,19 @@ The app runs with local seed data when Supabase env vars are missing, so reviewe
 
 ```powershell
 NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 CLOUDFLARE_R2_ACCOUNT_ID=
 CLOUDFLARE_R2_ACCESS_KEY_ID=
 CLOUDFLARE_R2_SECRET_ACCESS_KEY=
+CLOUDFLARE_R2_BUCKET_NAME=openchat-agents-media
+CLOUDFLARE_R2_PUBLIC_URL=
 CLOUDFLARE_R2_BUCKET=openchat-agents-media
 S3_BUCKET_NAME=openchat-agents-media
 ```
+
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is preferred for new Supabase projects. `NEXT_PUBLIC_SUPABASE_ANON_KEY` remains supported for legacy key setups.
 
 ## Supabase
 

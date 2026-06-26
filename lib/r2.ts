@@ -10,17 +10,27 @@ export type R2Status = {
   configured: boolean;
   missing: string[];
   endpoint: string | null;
+  publicUrlBase: string | null;
 };
 
-function env(name: string, fallbackName?: string) {
-  return process.env[name] || (fallbackName ? process.env[fallbackName] : undefined);
+function env(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) return value;
+  }
+  return undefined;
+}
+
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
 }
 
 export function getR2Status(): R2Status {
   const accountId = env("CLOUDFLARE_R2_ACCOUNT_ID", "R2_ACCOUNT_ID");
   const accessKeyId = env("CLOUDFLARE_R2_ACCESS_KEY_ID", "R2_ACCESS_KEY_ID");
   const secretAccessKey = env("CLOUDFLARE_R2_SECRET_ACCESS_KEY", "R2_SECRET_ACCESS_KEY");
-  const bucket = env("CLOUDFLARE_R2_BUCKET", "S3_BUCKET_NAME") || DEFAULT_BUCKET;
+  const bucket = env("CLOUDFLARE_R2_BUCKET_NAME", "CLOUDFLARE_R2_BUCKET", "S3_BUCKET_NAME") || DEFAULT_BUCKET;
+  const publicUrlBase = env("CLOUDFLARE_R2_PUBLIC_URL");
   const missing = [
     ["CLOUDFLARE_R2_ACCOUNT_ID", accountId],
     ["CLOUDFLARE_R2_ACCESS_KEY_ID", accessKeyId],
@@ -33,7 +43,8 @@ export function getR2Status(): R2Status {
     bucket,
     configured: missing.length === 0,
     missing,
-    endpoint: accountId ? `https://${accountId}.r2.cloudflarestorage.com` : null
+    endpoint: accountId ? `https://${accountId}.r2.cloudflarestorage.com` : null,
+    publicUrlBase: publicUrlBase ? trimTrailingSlash(publicUrlBase) : null
   };
 }
 
@@ -94,6 +105,7 @@ export async function createMediaUploadUrl(input: { objectKey: string; mimeType:
   return {
     bucket: status.bucket,
     objectKey: input.objectKey,
+    publicUrl: status.publicUrlBase ? `${status.publicUrlBase}/${input.objectKey}` : null,
     uploadUrl,
     expiresIn: 600
   };

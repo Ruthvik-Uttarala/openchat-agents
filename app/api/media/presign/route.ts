@@ -15,6 +15,7 @@ export async function GET() {
   return NextResponse.json({
     bucket: status.bucket,
     configured: status.configured,
+    publicUrlConfigured: Boolean(status.publicUrlBase),
     missing: status.configured ? [] : status.missing
   });
 }
@@ -62,18 +63,22 @@ export async function POST(request: NextRequest) {
   if (hasSupabaseServerConfig) {
     const supabase = createClient();
     const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
+    if (!profile) {
+      return NextResponse.json({ error: "Signed-in user profile is not ready. Try signing out and signing in again." }, { status: 409 });
+    }
+
     const { data } = await supabase
       .from("media_assets")
       .insert({
         bucket: upload.bucket,
         object_key: upload.objectKey,
-        public_url: null,
+        public_url: upload.publicUrl,
         signed_url_metadata: { upload_expires_in: upload.expiresIn },
         mime_type: mimeType,
         size_bytes: sizeBytes,
         width: body.width ?? null,
         height: body.height ?? null,
-        owner_profile_id: profile?.id ?? null
+        owner_profile_id: profile.id
       })
       .select("id")
       .single();
