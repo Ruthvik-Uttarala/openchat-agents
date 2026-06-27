@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { getCurrentUser } from "@/lib/session";
 import { agents as seedAgents, ownedAgents as seedOwnedAgents, posts as seedPosts, searchSeed, trends as seedTrends } from "./seed-data";
 import type { Agent, MediaAsset, OwnedAgent, Post, PostSection, Reply, Trend, ViewerState } from "./types";
-import { createClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
+import { createClient, createStaticClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
 type DataMode = "supabase" | "seed";
 
@@ -15,6 +15,10 @@ export type FeedData = {
   ownedAgents: OwnedAgent[];
   mode: DataMode;
   warning?: string;
+};
+
+type FeedOptions = {
+  includeViewer?: boolean;
 };
 
 type MediaAssetRow = {
@@ -278,7 +282,7 @@ function toPost(
 
 const readPublicAgents = unstable_cache(
   async () => {
-    const supabase = createClient();
+    const supabase = createStaticClient();
     const { data, error } = await supabase
       .from("agent_profiles")
       .select(
@@ -295,7 +299,7 @@ const readPublicAgents = unstable_cache(
 
 const readPublicPosts = unstable_cache(
   async () => {
-    const supabase = createClient();
+    const supabase = createStaticClient();
     const { data, error } = await supabase
       .from("posts")
       .select(
@@ -313,7 +317,7 @@ const readPublicPosts = unstable_cache(
 
 const readPublicReplies = unstable_cache(
   async () => {
-    const supabase = createClient();
+    const supabase = createStaticClient();
     const { data, error } = await supabase
       .from("replies")
       .select(
@@ -401,12 +405,21 @@ async function getViewerState(agentIds: string[], postIds: string[]): Promise<{
   };
 }
 
-async function readPublicFeedFromSupabase(): Promise<FeedData> {
+async function readPublicFeedFromSupabase(options: FeedOptions = {}): Promise<FeedData> {
+  const { includeViewer = true } = options;
   const [agentRows, postRows, replyRows] = await Promise.all([readPublicAgents(), readPublicPosts(), readPublicReplies()]);
-  const viewer = await getViewerState(
-    agentRows.map((row) => row.id),
-    postRows.map((row) => row.id)
-  );
+  const viewer = includeViewer
+    ? await getViewerState(
+        agentRows.map((row) => row.id),
+        postRows.map((row) => row.id)
+      )
+    : {
+        followingAgentIds: new Set<string>(),
+        likedPostIds: new Set<string>(),
+        repostedPostIds: new Set<string>(),
+        ownedAgentIds: new Set<string>(),
+        ownedAgents: [] as OwnedAgent[]
+      };
 
   const agentMap = new Map<string, Agent>();
   const agents = agentRows.map((row) => {
@@ -436,12 +449,16 @@ async function readPublicFeedFromSupabase(): Promise<FeedData> {
 }
 
 export async function getFeedData(): Promise<FeedData> {
+  return getFeedDataWithOptions();
+}
+
+export async function getFeedDataWithOptions(options: FeedOptions = {}): Promise<FeedData> {
   if (!hasSupabaseServerConfig) {
     return fallback("Supabase env vars are not configured; using local seed data.");
   }
 
   try {
-    const feed = await readPublicFeedFromSupabase();
+    const feed = await readPublicFeedFromSupabase(options);
     if (!feed.agents.length || !feed.posts.length) return fallback("Supabase returned no public rows; using local seed data.");
     return feed;
   } catch (error) {
@@ -470,8 +487,8 @@ async function searchViaRpc(query: string): Promise<SearchRpcResult | null> {
   };
 }
 
-export async function getSearchData(query: string) {
-  const feed = await getFeedData();
+export async function getSearchData(query: string, options: FeedOptions = {}) {
+  const feed = await getFeedDataWithOptions(options);
   const q = query.toLowerCase().trim();
 
   if (!q) {
@@ -513,8 +530,8 @@ export async function getSearchData(query: string) {
   return { ...fallbackSearch, mode: feed.mode, warning: feed.warning };
 }
 
-export async function getAgentData(handle: string) {
-  const feed = await getFeedData();
+export async function getAgentData(handle: string, options: FeedOptions = {}) {
+  const feed = await getFeedDataWithOptions(options);
   const agent = feed.agents.find((candidate) => candidate.handle === handle);
   if (!agent) return { agent: null, posts: [], mode: feed.mode, warning: feed.warning, ownedAgents: feed.ownedAgents };
 

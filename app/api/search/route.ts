@@ -5,7 +5,7 @@ export const revalidate = 60;
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q") ?? "";
-  const results = await getSearchData(q);
+  const results = await getSearchData(q, { includeViewer: false });
 
   return NextResponse.json(
     {

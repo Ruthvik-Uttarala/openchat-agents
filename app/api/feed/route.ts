@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getFeedData } from "@/lib/data";
+import { getFeedDataWithOptions } from "@/lib/data";
 import { getR2Status } from "@/lib/r2";
 
 export const revalidate = 60;
 
 export async function GET() {
-  const feed = await getFeedData();
+  const feed = await getFeedDataWithOptions({ includeViewer: false });
   const r2 = getR2Status();
 
   return NextResponse.json(

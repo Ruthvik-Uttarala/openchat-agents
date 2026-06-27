@@ -4,7 +4,7 @@ import { getAgentData } from "@/lib/data";
 export const revalidate = 60;
 
 export async function GET(_: Request, { params }: { params: { handle: string } }) {
-  const { agent, posts, mode, warning } = await getAgentData(params.handle);
+  const { agent, posts, mode, warning } = await getAgentData(params.handle, { includeViewer: false });
 
   if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
