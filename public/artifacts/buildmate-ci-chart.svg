@@ -1,0 +1,33 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1440" height="900" rx="36" fill="#F8F5FA"/>
+  <rect x="56" y="56" width="1328" height="136" rx="28" fill="#180018"/>
+  <text x="104" y="118" fill="white" font-size="48" font-family="Manrope, Arial, sans-serif" font-weight="800">Checkout CI regression trace</text>
+  <text x="104" y="166" fill="#D5CFE3" font-size="22" font-family="Manrope, Arial, sans-serif">Patch candidate prepared after replaying the cart flow on four responsive breakpoints.</text>
+  <rect x="92" y="246" width="824" height="566" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
+  <path d="M154 696H854" stroke="#E7E0EB" stroke-width="4" stroke-linecap="round"/>
+  <path d="M154 322V696" stroke="#E7E0EB" stroke-width="4" stroke-linecap="round"/>
+  <path d="M190 640L314 512L438 562L562 404L686 446L810 338" stroke="#6258F5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="190" cy="640" r="18" fill="#6258F5"/>
+  <circle cx="314" cy="512" r="18" fill="#6258F5"/>
+  <circle cx="438" cy="562" r="18" fill="#6258F5"/>
+  <circle cx="562" cy="404" r="18" fill="#F2B962"/>
+  <circle cx="686" cy="446" r="18" fill="#6258F5"/>
+  <circle cx="810" cy="338" r="18" fill="#3D98C8"/>
+  <text x="144" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Mobile</text>
+  <text x="290" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Tablet</text>
+  <text x="414" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Desktop</text>
+  <text x="552" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Retry</text>
+  <text x="678" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Patched</text>
+  <text x="780" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Verified</text>
+  <rect x="962" y="246" width="386" height="260" rx="28" fill="#180018"/>
+  <text x="998" y="306" fill="white" font-size="26" font-family="Manrope, Arial, sans-serif" font-weight="800">Root cause</text>
+  <text x="998" y="364" fill="#F2B962" font-size="18" font-family="Manrope, Arial, sans-serif" font-weight="700">•</text>
+  <text x="1030" y="364" fill="#E6DEEE" font-size="18" font-family="Manrope, Arial, sans-serif">Optimistic cart state finished before the order id existed.</text>
+  <text x="998" y="424" fill="#F2B962" font-size="18" font-family="Manrope, Arial, sans-serif" font-weight="700">•</text>
+  <text x="1030" y="424" fill="#E6DEEE" font-size="18" font-family="Manrope, Arial, sans-serif">The flaky branch only surfaced on small viewport navigation timing.</text>
+  <rect x="962" y="544" width="386" height="268" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
+  <text x="998" y="604" fill="#180018" font-size="26" font-family="Manrope, Arial, sans-serif" font-weight="800">Patch plan</text>
+  <text x="998" y="662" fill="#180018" font-size="18" font-family="Manrope, Arial, sans-serif">1. Block submit until order id exists.</text>
+  <text x="998" y="712" fill="#180018" font-size="18" font-family="Manrope, Arial, sans-serif">2. Emit the id in the browser trace summary.</text>
+  <text x="998" y="762" fill="#180018" font-size="18" font-family="Manrope, Arial, sans-serif">3. Re-run 390px and 1440px flows before merge.</text>
+</svg>

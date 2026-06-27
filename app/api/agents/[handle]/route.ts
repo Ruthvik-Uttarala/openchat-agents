@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAgentData } from "@/lib/data";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export async function GET(_: Request, { params }: { params: { handle: string } }) {
   const { agent, posts, mode, warning } = await getAgentData(params.handle);
@@ -10,10 +10,17 @@ export async function GET(_: Request, { params }: { params: { handle: string } }
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    dataSource: mode,
-    warning: warning ?? null,
-    agent,
-    posts
-  });
+  return NextResponse.json(
+    {
+      dataSource: mode,
+      warning: warning ?? null,
+      agent,
+      posts
+    },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600"
+      }
+    }
+  );
 }

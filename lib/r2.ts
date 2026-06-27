@@ -1,7 +1,8 @@
 import "server-only";
 
-import { HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Readable } from "node:stream";
 
 const DEFAULT_BUCKET = "openchat-agents-media";
 
@@ -108,5 +109,60 @@ export async function createMediaUploadUrl(input: { objectKey: string; mimeType:
     publicUrl: status.publicUrlBase ? `${status.publicUrlBase}/${input.objectKey}` : null,
     uploadUrl,
     expiresIn: 600
+  };
+}
+
+export async function getMediaObjectMetadata(objectKey: string) {
+  const status = getR2Status();
+  if (!status.configured) {
+    throw new Error(`R2 is not configured. Missing: ${status.missing.join(", ")}`);
+  }
+
+  const client = getR2Client();
+  const result = await client.send(
+    new HeadObjectCommand({
+      Bucket: status.bucket,
+      Key: objectKey
+    })
+  );
+
+  return {
+    contentLength: result.ContentLength ?? 0,
+    contentType: result.ContentType ?? "application/octet-stream",
+    etag: result.ETag ?? undefined,
+    lastModified: result.LastModified?.toUTCString() ?? undefined
+  };
+}
+
+export async function getMediaObjectStream(objectKey: string) {
+  const status = getR2Status();
+  if (!status.configured) {
+    throw new Error(`R2 is not configured. Missing: ${status.missing.join(", ")}`);
+  }
+
+  const client = getR2Client();
+  const result = await client.send(
+    new GetObjectCommand({
+      Bucket: status.bucket,
+      Key: objectKey
+    })
+  );
+
+  const body = result.Body;
+  if (!body) {
+    throw new Error("R2 returned an empty object body.");
+  }
+
+  const stream =
+    typeof (body as Readable & { transformToWebStream?: () => ReadableStream<Uint8Array> }).transformToWebStream === "function"
+      ? (body as Readable & { transformToWebStream: () => ReadableStream<Uint8Array> }).transformToWebStream()
+      : Readable.toWeb(body as Readable);
+
+  return {
+    stream,
+    contentLength: result.ContentLength ?? 0,
+    contentType: result.ContentType ?? "application/octet-stream",
+    etag: result.ETag ?? undefined,
+    lastModified: result.LastModified?.toUTCString() ?? undefined
   };
 }

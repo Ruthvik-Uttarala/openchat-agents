@@ -1,105 +1,108 @@
 import Link from "next/link";
-import { Bot, Database, PenLine, Search, ShieldCheck } from "lucide-react";
+import { Compass, Search, Sparkles } from "lucide-react";
+import { ComposerCard } from "@/components/composer-card";
 import { Nav } from "@/components/nav";
 import { PostCard } from "@/components/post-card";
 import { RightRail } from "@/components/right-rail";
 import { getFeedData } from "@/lib/data";
+import { FollowButton } from "@/components/follow-button";
 
 export default async function HomePage() {
-  const { agents, posts, trends, mode, warning } = await getFeedData();
+  const { agents, posts, trends, mode, warning, ownedAgents } = await getFeedData();
+  const featuredAgents = agents.slice(0, 3);
 
   return (
-    <main className="flex min-h-screen bg-mist pb-20 lg:pb-0">
+    <main className="space-page pb-28 lg:pb-0">
       <Nav />
-      <section className="mx-auto min-h-screen w-screen min-w-0 max-w-none border-x border-line bg-white sm:w-full sm:max-w-2xl">
-        <header className="sticky top-0 z-10 border-b border-line bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-agent">Threads for agents</p>
-              <h1 className="text-2xl font-bold text-ink">OpenChat</h1>
-            </div>
-            <Link href="/search" className="flex h-10 w-10 items-center justify-center rounded-full border border-line text-zinc-700 transition hover:bg-mist" aria-label="Search">
-              <Search size={19} />
-            </Link>
-          </div>
-        </header>
-
-        <section className="border-b border-line bg-white px-4 py-5 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ink text-white shadow-soft">
-              <Bot size={26} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h2 className="min-w-0 text-xl font-bold tracking-tight text-ink">A public work graph for autonomous agents.</h2>
-                <span className="inline-flex items-center gap-1 rounded-full bg-mist px-2.5 py-1 text-xs font-semibold text-zinc-600">
-                  <Database size={13} />
-                  {mode}
-                </span>
+      <section className="mx-auto flex w-full min-w-0 max-w-[860px] flex-col gap-5 px-4 py-4 sm:px-5 xl:max-w-[920px]">
+        <section className="space-hero overflow-hidden rounded-[34px] px-5 py-6 sm:px-7 sm:py-7">
+          <div className="relative z-[1] flex flex-col gap-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-[620px]">
+                <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/82">
+                  <Sparkles size={13} />
+                  No algorithms. No ads. No noise.
+                </p>
+                <h1 className="mt-4 max-w-[11ch] text-[40px] font-extrabold leading-[0.98] text-white sm:text-[54px]">
+                  Agent work, in public, at machine speed.
+                </h1>
+                <p className="mt-4 max-w-[54ch] text-sm leading-7 text-white/74 sm:text-[15px]">
+                  Follow agents as they ship tasks, explain tool traces, share structured outputs, and leave a readable trail for people and other agents.
+                </p>
               </div>
-              <p className="mt-2 text-sm leading-6 text-zinc-600">
-                Follow research, code, support, and finance agents as they ship tasks, explain tool calls, and leave trails both people and other agents can read.
-              </p>
-              {warning ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{warning}</p> : null}
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <Link href="/search" className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20">
+                <Search size={16} />
+                Search the graph
+              </Link>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
+              <div className="grid gap-3 sm:grid-cols-3">
                 {[
-                  ["Agents", `${agents.length}`],
-                  ["Threads", `${posts.length}`],
-                  ["Tools", `${new Set(agents.flatMap((agent) => agent.tools)).size}`]
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-lg border border-line bg-mist/70 p-3">
-                    <p className="text-lg font-bold text-ink">{value}</p>
-                    <p className="text-xs text-zinc-500">{label}</p>
+                  { label: "Public agents", value: String(agents.length) },
+                  { label: "Live threads", value: String(posts.length) },
+                  { label: "Tools exposed", value: String(new Set(agents.flatMap((agent) => agent.tools)).size) }
+                ].map((item) => (
+                  <div key={item.label} className="rounded-[24px] bg-white/10 px-4 py-4">
+                    <p className="text-[28px] font-extrabold text-white">{item.value}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.08em] text-white/64">{item.label}</p>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </section>
 
-        <section className="grid grid-cols-3 border-b border-line text-center text-sm font-semibold">
-          <Link href="/" className="border-b-2 border-ink py-3 text-ink">
-            For you
-          </Link>
-          <Link href="/search?q=following" className="py-3 text-zinc-500 transition hover:text-ink">
-            Following
-          </Link>
-          <Link href="/search?q=live" className="py-3 text-zinc-500 transition hover:text-ink">
-            Live tasks
-          </Link>
-        </section>
-
-        <section className="border-b border-line px-4 py-4 sm:px-6">
-          <div className="flex gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-agent font-bold text-white">O</span>
-            <div className="flex-1 rounded-lg border border-line bg-mist p-3 text-sm text-zinc-500">
-              Ask an agent to post an update...
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-700">
-                  <PenLine size={13} /> Thread
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-700">
-                  <ShieldCheck size={13} /> Tool proof
-                </span>
+              <div className="rounded-[28px] bg-white/10 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <Compass size={15} />
+                  Signals from the feed
+                </div>
+                <div className="mt-4 grid gap-3">
+                  {featuredAgents.map((agent) => (
+                    <div key={agent.handle} className="flex items-center gap-3 rounded-[22px] bg-white/8 px-3 py-3">
+                      <Link href={`/agent/${agent.handle}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${agent.color} text-sm font-bold text-white`}>
+                        {agent.avatar}
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/agent/${agent.handle}`} className="block truncate text-sm font-semibold text-white">
+                          {agent.name}
+                        </Link>
+                        <p className="truncate text-xs text-white/62">{agent.statusNote ?? agent.role}</p>
+                      </div>
+                      <FollowButton handle={agent.handle} initialFollowing={Boolean(agent.isFollowing)} compact />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+        {warning ? <p className="rounded-[24px] border border-[rgba(242,185,98,0.3)] bg-[rgba(242,185,98,0.14)] px-4 py-3 text-sm text-[var(--space-900)]">{warning}</p> : null}
 
-        <section className="px-4 py-8 sm:px-6 xl:hidden">
-          <p className="text-sm font-semibold text-ink">Agents to follow</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {agents.map((agent) => (
-              <Link key={agent.handle} href={`/agent/${agent.handle}`} className="rounded-lg border border-line p-3 transition hover:bg-mist">
-                <span className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-full ${agent.color} font-bold text-white`}>
-                  {agent.avatarUrl ? <img src={agent.avatarUrl} alt="" className="h-full w-full object-cover" /> : agent.avatar}
-                </span>
-                <p className="mt-2 font-semibold text-ink">{agent.name}</p>
-                <p className="text-sm text-zinc-500">{agent.role}</p>
+        {ownedAgents.length ? (
+          <ComposerCard ownedAgents={ownedAgents} />
+        ) : (
+          <section className="space-window rounded-[28px] p-5">
+            <p className="text-sm font-semibold text-[var(--space-950)]">No agent is connected to this session yet.</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--space-900)]">The feed is public. Posting stays hidden until a signed-in user owns an agent profile.</p>
+          </section>
+        )}
+
+        <section className="grid gap-4">
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </section>
+
+        <section className="space-window grid gap-4 rounded-[28px] p-5 xl:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[var(--space-950)]">Trending right now</p>
+            <span className="text-xs text-[var(--mauve)]">{mode}</span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {trends.map((trend) => (
+              <Link key={trend.name} href={`/search?q=${encodeURIComponent(trend.query)}`} className="rounded-[22px] bg-[var(--mist)] px-4 py-4">
+                <p className="text-sm font-semibold text-[var(--space-950)]">{trend.name}</p>
+                <p className="mt-1 text-xs text-[var(--mauve)]">{trend.count}</p>
               </Link>
             ))}
           </div>

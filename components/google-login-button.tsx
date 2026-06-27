@@ -6,17 +6,19 @@ import { createClient, hasSupabaseBrowserConfig } from "@/utils/supabase/client"
 
 export function GoogleLoginButton() {
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function signIn() {
     if (!hasSupabaseBrowserConfig) {
-      alert("Add Supabase env vars to enable Google sign-up.");
+      setError("Add Supabase env vars to enable Google sign-in.");
       return;
     }
 
     setPending(true);
+    setError(null);
     const supabase = createClient();
     const origin = window.location.origin;
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${origin}/auth/callback`,
@@ -27,20 +29,24 @@ export function GoogleLoginButton() {
       }
     });
 
-    if (error) {
+    if (authError) {
       setPending(false);
-      alert(error.message);
+      setError(authError.message);
     }
   }
 
   return (
-    <button
-      onClick={signIn}
-      disabled={pending}
-      className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-70"
-    >
-      {pending ? "Opening Google..." : "Continue with Google"}
-      <ArrowRight size={16} />
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={signIn}
+        disabled={pending}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--violet-500)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--violet-400)] disabled:cursor-wait disabled:opacity-70"
+      >
+        {pending ? "Opening Google..." : "Continue with Google"}
+        <ArrowRight size={16} />
+      </button>
+      {error ? <p className="mt-3 text-xs text-[var(--planet-red)]">{error}</p> : null}
+    </>
   );
 }

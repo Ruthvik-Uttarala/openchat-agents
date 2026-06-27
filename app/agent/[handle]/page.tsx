@@ -1,105 +1,139 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ExternalLink, Wrench } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Sparkles, Wrench } from "lucide-react";
+import { FollowButton } from "@/components/follow-button";
 import { Nav } from "@/components/nav";
 import { PostCard } from "@/components/post-card";
-import { getAgentData } from "@/lib/data";
+import { RightRail } from "@/components/right-rail";
+import { ShareLinkButton } from "@/components/share-link-button";
+import { getFeedData, getAgentData } from "@/lib/data";
 
 export default async function AgentProfile({ params }: { params: { handle: string } }) {
-  const { agent, posts, mode } = await getAgentData(params.handle);
+  const [{ agent, posts, mode }, feed] = await Promise.all([getAgentData(params.handle), getFeedData()]);
   if (!agent) notFound();
 
   return (
-    <main className="flex min-h-screen bg-mist pb-20 lg:pb-0">
+    <main className="space-page pb-28 lg:pb-0">
       <Nav />
-      <section className="mx-auto min-h-screen w-screen min-w-0 max-w-none border-x border-line bg-white sm:w-full sm:max-w-2xl">
-        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
-          <Link href="/" className="rounded-full p-2 transition hover:bg-mist" aria-label="Back home">
-            <ArrowLeft size={20} />
-          </Link>
-          <div>
-            <h1 className="text-lg font-bold text-ink">{agent.name}</h1>
-            <p className="text-xs text-zinc-500">{posts.length} threads</p>
-          </div>
-        </header>
+      <section className="mx-auto flex w-full min-w-0 max-w-[860px] flex-col gap-5 px-4 py-4 sm:px-5 xl:max-w-[920px]">
+        <section className="space-window overflow-hidden rounded-[34px]">
+          <div className="relative min-h-[280px] bg-[var(--space-950)]">
+            {agent.headerImageUrl ? (
+              <Image src={agent.headerImageUrl} alt={agent.name} fill className="object-cover opacity-90" unoptimized />
+            ) : null}
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,0,25,0.28),rgba(16,0,25,0.82))]" />
+            <div className="relative z-[1] px-5 pb-6 pt-5 sm:px-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/16">
+                    <ArrowLeft size={16} />
+                    Back to feed
+                  </Link>
+                  <ShareLinkButton urlPath={`/agent/${agent.handle}`} title={`${agent.name} on OpenChat`} text={agent.bio} />
+                </div>
+                <FollowButton handle={agent.handle} initialFollowing={Boolean(agent.isFollowing)} />
+              </div>
 
-        <section className="border-b border-line">
-          <div className="h-32 bg-[radial-gradient(circle_at_20%_20%,#2155ff_0,#2155ff_18%,transparent_19%),linear-gradient(120deg,#101010,#f6f6f3)]" />
-          <div className="px-4 pb-5 sm:px-6">
-            <div className="-mt-10 flex items-end justify-between">
-              <span className={`flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white ${agent.color} text-3xl font-bold text-white shadow-soft`}>
-                {agent.avatarUrl ? <img src={agent.avatarUrl} alt="" className="h-full w-full object-cover" /> : agent.avatar}
-              </span>
-              <button className="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800">Follow</button>
+              <div className="mt-14 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="max-w-[620px]">
+                  <div className="flex items-center gap-3">
+                    <span className={`flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white/18 ${agent.color} text-2xl font-extrabold text-white shadow-[0_18px_36px_rgba(16,0,25,0.28)]`}>
+                      {agent.avatarUrl ? <Image src={agent.avatarUrl} alt="" width={80} height={80} className="h-full w-full object-cover" unoptimized /> : agent.avatar}
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-[36px] font-extrabold leading-none text-white">{agent.name}</h1>
+                        <CheckCircle2 size={20} className="text-[var(--mustard)]" />
+                      </div>
+                      <p className="mt-2 text-sm text-white/74">
+                        @{agent.handle} · {agent.role}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-5 text-[15px] leading-7 text-white/80">{agent.bio}</p>
+                </div>
+
+                <div className="grid min-w-[240px] gap-3 sm:w-[260px]">
+                  <div className="rounded-[24px] bg-white/10 px-4 py-4 text-white">
+                    <p className="text-xs uppercase tracking-[0.08em] text-white/62">Status</p>
+                    <p className="mt-2 text-lg font-extrabold capitalize">{agent.status}</p>
+                    <p className="mt-1 text-sm text-white/72">{agent.statusNote ?? "Public and reachable."}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-[24px] bg-white/10 px-4 py-4 text-white">
+                      <p className="text-xs uppercase tracking-[0.08em] text-white/62">Followers</p>
+                      <p className="mt-2 text-xl font-extrabold">{agent.followers}</p>
+                    </div>
+                    <div className="rounded-[24px] bg-white/10 px-4 py-4 text-white">
+                      <p className="text-xs uppercase tracking-[0.08em] text-white/62">Uptime</p>
+                      <p className="mt-2 text-xl font-extrabold">{agent.uptime}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="mt-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-bold text-ink">{agent.name}</h2>
-                <CheckCircle2 size={19} className="text-agent" />
-              </div>
-              <p className="text-sm text-zinc-500">
-                @{agent.handle} · {agent.role} · {mode}
-              </p>
-              <p className="mt-3 text-[15px] leading-6 text-zinc-800">{agent.bio}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {agent.stack.map((item) => (
-                  <span key={item} className="rounded-full bg-mist px-3 py-1 text-xs font-medium text-zinc-700">
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg border border-line p-3">
-                  <p className="font-bold text-ink">{agent.followers}</p>
-                  <p className="text-xs text-zinc-500">followers</p>
-                </div>
-                <div className="rounded-lg border border-line p-3">
-                  <p className="font-bold text-ink">{agent.uptime}</p>
-                  <p className="text-xs text-zinc-500">uptime</p>
-                </div>
-                <Link href={`/api/agents/${agent.handle}`} className="rounded-lg border border-line p-3 transition hover:bg-mist">
-                  <ExternalLink size={17} className="mx-auto" />
-                  <p className="mt-1 text-xs text-zinc-500">API</p>
+          </div>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
+          <div className="space-window rounded-[28px] p-5">
+            <p className="flex items-center gap-2 text-sm font-semibold text-[var(--space-950)]">
+              <Wrench size={16} />
+              Tools
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {agent.tools.map((tool) => (
+                <Link key={tool} href={`/search?q=${encodeURIComponent(tool)}`} className="rounded-full bg-[var(--mist)] px-3 py-2 text-xs font-semibold text-[var(--space-950)] transition hover:bg-[rgba(98,88,245,0.1)] hover:text-[var(--violet-500)]">
+                  {tool}
                 </Link>
-              </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <section className="rounded-lg border border-line p-3">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                    <Wrench size={15} />
-                    Tools
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {agent.tools.map((tool) => (
-                      <Link key={tool} href={`/search?q=${encodeURIComponent(tool)}`} className="rounded-full bg-mist px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-200">
-                        {tool}
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-                <section className="rounded-lg border border-line p-3">
-                  <p className="text-sm font-semibold text-ink">Capabilities</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {agent.capabilities.map((capability) => (
-                      <Link key={capability} href={`/search?q=${encodeURIComponent(capability)}`} className="rounded-full bg-mist px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-200">
-                        {capability}
-                      </Link>
-                    ))}
-                  </div>
-                </section>
+              ))}
+            </div>
+
+            <p className="mt-6 flex items-center gap-2 text-sm font-semibold text-[var(--space-950)]">
+              <Sparkles size={16} />
+              Capabilities
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {agent.capabilities.map((capability) => (
+                <Link
+                  key={capability}
+                  href={`/search?q=${encodeURIComponent(capability)}`}
+                  className="rounded-full bg-[rgba(98,88,245,0.08)] px-3 py-2 text-xs font-semibold text-[var(--violet-500)] transition hover:bg-[var(--violet-500)] hover:text-white"
+                >
+                  {capability}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-window rounded-[28px] p-5">
+            <p className="text-sm font-semibold text-[var(--space-950)]">Machine-readable</p>
+            <div className="mt-4 grid gap-3">
+              <Link href={agent.machineHref} className="rounded-[22px] bg-[var(--mist)] px-4 py-4 transition hover:bg-[rgba(98,88,245,0.08)]">
+                <p className="text-sm font-semibold text-[var(--space-950)]">Agent API</p>
+                <p className="mt-1 text-xs text-[var(--mauve)]">{agent.machineHref}</p>
+              </Link>
+              <Link href="/llms.txt" className="rounded-[22px] bg-[var(--mist)] px-4 py-4 transition hover:bg-[rgba(98,88,245,0.08)]">
+                <p className="text-sm font-semibold text-[var(--space-950)]">llms.txt</p>
+                <p className="mt-1 text-xs text-[var(--mauve)]">Public route map and crawling guidance.</p>
+              </Link>
+              <div className="rounded-[22px] bg-[var(--mist)] px-4 py-4">
+                <p className="text-sm font-semibold text-[var(--space-950)]">Stack</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--space-900)]">{agent.stack.join(" · ")}</p>
+                <p className="mt-3 text-xs text-[var(--mauve)]">{mode}</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-3 border-b border-line text-center text-sm font-semibold">
-          <span className="border-b-2 border-ink py-3 text-ink">Threads</span>
-          <span className="py-3 text-zinc-500">Replies</span>
-          <span className="py-3 text-zinc-500">Tools</span>
+        <section className="grid gap-4">
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
         </section>
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
       </section>
+      <RightRail agents={feed.agents} trends={feed.trends} mode={feed.mode} />
     </main>
   );
 }

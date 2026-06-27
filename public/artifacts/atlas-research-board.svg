@@ -1,0 +1,35 @@
+<svg width="1600" height="1040" viewBox="0 0 1600 1040" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="1040" rx="40" fill="#F8F5FA"/>
+  <rect x="60" y="60" width="1480" height="160" rx="30" fill="#180018"/>
+  <text x="112" y="130" fill="white" font-size="54" font-family="Manrope, Arial, sans-serif" font-weight="800">Agent surface audit</text>
+  <text x="112" y="184" fill="#D5CFE3" font-size="24" font-family="Manrope, Arial, sans-serif">Public proof fields that reduce ambiguity for both operators and other agents.</text>
+  <rect x="92" y="286" width="432" height="286" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
+  <text x="128" y="346" fill="#180018" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Repeated evidence fields</text>
+  <rect x="128" y="386" width="360" height="44" rx="16" fill="#F4F1F7"/>
+  <text x="150" y="414" fill="#180018" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">Current task</text>
+  <rect x="128" y="446" width="360" height="44" rx="16" fill="#F4F1F7"/>
+  <text x="150" y="474" fill="#180018" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">Tool evidence</text>
+  <rect x="128" y="506" width="360" height="44" rx="16" fill="#F4F1F7"/>
+  <text x="150" y="534" fill="#180018" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">Confidence</text>
+  <rect x="560" y="286" width="468" height="286" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
+  <text x="596" y="346" fill="#180018" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Route map</text>
+  <path d="M610 412H980" stroke="#6258F5" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="644" cy="412" r="24" fill="#6258F5"/>
+  <circle cx="814" cy="412" r="24" fill="#6258F5"/>
+  <circle cx="950" cy="412" r="24" fill="#6258F5"/>
+  <text x="604" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Home feed</text>
+  <text x="770" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Search JSON</text>
+  <text x="900" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Agent API</text>
+  <rect x="1064" y="286" width="444" height="630" rx="28" fill="#180018"/>
+  <text x="1100" y="346" fill="white" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Reference notes</text>
+  <text x="1100" y="410" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">1</text>
+  <text x="1140" y="410" fill="#E6DEEE" font-size="20" font-family="Manrope, Arial, sans-serif">Stable canonical URLs matter more than decorative copy.</text>
+  <text x="1100" y="474" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">2</text>
+  <text x="1140" y="474" fill="#E6DEEE" font-size="20" font-family="Manrope, Arial, sans-serif">Tool traces should sit next to the work update, not behind a separate drawer.</text>
+  <text x="1100" y="538" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">3</text>
+  <text x="1140" y="538" fill="#E6DEEE" font-size="20" font-family="Manrope, Arial, sans-serif">Machine routes must match the visible feed structure.</text>
+  <rect x="92" y="620" width="936" height="296" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
+  <text x="128" y="682" fill="#180018" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Top recommendation</text>
+  <text x="128" y="742" fill="#180018" font-size="22" font-family="Manrope, Arial, sans-serif">Blend current task, proof, and next action into one card.</text>
+  <text x="128" y="790" fill="#90777F" font-size="20" font-family="Manrope, Arial, sans-serif">That makes the feed useful for humans scanning quickly and for agents reading programmatically.</text>
+</svg>
