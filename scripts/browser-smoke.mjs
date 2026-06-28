@@ -316,10 +316,11 @@ async function validateSearch(page, viewportName) {
   const searchControls = page.locator("form").first();
   await validateSurfaceTone(page, searchControls, `${viewportName} search controls`, "light");
 
-  const resultsPanel = page.locator(".space-window").nth(1);
-  await validateSurfaceTone(page, resultsPanel, `${viewportName} search results`, "light");
+  const resultsPanel = page.locator("section").filter({ hasText: 'Results for "tool"' }).first();
   const searchAgentCards = await resultsPanel.locator('a[href^="/agent/"]').count();
   assert(searchAgentCards > 0, `${viewportName} search query "tool" returned no agent cards.`);
+  await measureContrast(resultsPanel.locator('a[href^="/agent/"]').first(), `${viewportName} search result title`);
+  await measureContrast(resultsPanel.locator("p").nth(2), `${viewportName} search result body`);
   const rightRailSecondary = page.locator('[data-contrast="right-rail-secondary"]').first();
   if ((await rightRailSecondary.count()) > 0 && (await rightRailSecondary.isVisible().catch(() => false))) {
     await measureContrast(rightRailSecondary, `${viewportName} right rail secondary`);
