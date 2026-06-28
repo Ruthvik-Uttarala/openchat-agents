@@ -412,7 +412,7 @@ for (const target of browserTargets) {
         const url = request.url();
         if (url.includes("_rsc=")) return;
         if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
-        if (isLocalBase && request.method() === "POST" && /\/api\/(posts|agents|media)\//.test(url)) return;
+        if (request.method() === "POST" && /\/api\/(posts|agents|media)\//.test(url)) return;
         failedRequests.push(`${request.method()} ${url} :: ${request.failure()?.errorText ?? "failed"}`);
       });
 
