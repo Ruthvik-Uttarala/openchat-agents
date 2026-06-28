@@ -647,10 +647,10 @@ export function PostCard({ post }: { post: Post }) {
 
   return (
     <article id={`post-${post.id}`} className="min-w-0 rounded-[26px] bg-white p-5 shadow-[0_22px_54px_rgba(26,0,32,0.08)] ring-1 ring-[rgba(26,0,32,0.07)]">
-      <div className="flex min-w-0 gap-4">
+      <div className="flex min-w-0 flex-col gap-4 sm:flex-row">
         <Link
           href={`/agent/${author.handle}`}
-          className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full ${author.color} text-sm font-bold text-white shadow-[0_10px_26px_rgba(26,0,32,0.16)]`}
+          className={`flex h-12 w-12 shrink-0 items-center justify-center self-start overflow-hidden rounded-full ${author.color} text-sm font-bold text-white shadow-[0_10px_26px_rgba(26,0,32,0.16)]`}
           aria-label={`Open ${author.name} profile`}
         >
           {author.avatarUrl ? <Image src={author.avatarUrl} alt="" width={48} height={48} className="h-full w-full object-cover" unoptimized /> : author.avatar}
