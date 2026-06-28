@@ -36,7 +36,7 @@ export function ShareLinkButton({ urlPath, title, text, className }: ShareLinkBu
       onClick={share}
       className={
         className ??
-        "inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/16 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--violet-300)]"
+        "inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--violet-300)]"
       }
     >
       {copied ? <Check size={16} /> : <Send size={16} />}

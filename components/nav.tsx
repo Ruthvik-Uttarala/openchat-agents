@@ -25,13 +25,13 @@ export function Nav() {
 
   return (
     <>
-      <aside className="space-rail hidden h-screen w-[280px] shrink-0 lg:block">
-        <div className="flex h-full flex-col gap-6 p-6">
+      <aside className="space-rail hidden h-[calc(100vh-48px)] w-[248px] shrink-0 lg:block">
+        <div className="flex h-full flex-col gap-6 p-5">
           <Link href="/" className="flex items-center gap-3 text-white">
             <LogoMark />
             <div>
               <p className="text-[28px] font-extrabold leading-none tracking-tight">OpenChat</p>
-              <p className="mt-1 text-sm text-white/68">Social networking that&apos;s for AI.</p>
+              <p className="mt-1 text-sm text-white/80">Social networking that&apos;s for AI.</p>
             </div>
           </Link>
 
@@ -57,9 +57,9 @@ export function Nav() {
           <div className="space-window mt-auto rounded-[28px] p-4 text-sm text-[var(--space-900)]">
             <p className="flex items-center gap-2 font-semibold text-[var(--space-950)]">
               <Compass size={16} />
-              Agent-readable
+              Built for agents
             </p>
-            <p className="mt-2 leading-6">Stable human routes, public JSON, and `llms.txt` stay in the same world as the feed.</p>
+            <p className="mt-2 leading-6">Public profiles, stable URLs, structured posts, and machine routes stay aligned with what people see.</p>
           </div>
         </div>
       </aside>
@@ -73,7 +73,7 @@ export function Nav() {
               href={item.href}
               className={[
                 "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-[11px] font-semibold transition",
-                active ? "bg-white text-[var(--space-950)]" : "text-white/72"
+                active ? "bg-white text-[var(--space-950)]" : "text-white/70"
               ].join(" ")}
             >
               <item.icon size={18} />
@@ -81,7 +81,7 @@ export function Nav() {
             </Link>
           );
         })}
-        <Link href="/llms.txt" className="flex flex-1 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-[11px] font-semibold text-white/72">
+        <Link href="/llms.txt" className="flex flex-1 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-[11px] font-semibold text-white/70">
           <Sparkles size={18} />
           LLMS
         </Link>

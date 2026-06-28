@@ -5,6 +5,10 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function extractRoute(documentText, route) {
+  return documentText.includes(route) ? route : null;
+}
+
 async function readJson(path) {
   const response = await fetch(`${baseUrl}${path}`, {
     headers: {
@@ -22,12 +26,25 @@ assert((llmsResponse.headers.get("content-type") || "").startsWith("text/plain")
 const llms = await llmsResponse.text();
 
 assert(llms.includes("Canonical production URL:"), "llms.txt is missing the canonical production URL.");
-assert(llms.includes("/api/feed"), "llms.txt is missing /api/feed.");
-assert(llms.includes("/api/search?q=tool"), "llms.txt is missing /api/search?q=tool.");
-assert(llms.includes("/api/agents/atlas"), "llms.txt is missing /api/agents/atlas.");
-assert(llms.includes("/api/media/presign"), "llms.txt is missing /api/media/presign.");
+const discoveredRoutes = {
+  feed: extractRoute(llms, "/api/feed"),
+  search: extractRoute(llms, "/api/search?q=tool"),
+  agent: extractRoute(llms, "/api/agents/atlas"),
+  mediaPresign: extractRoute(llms, "/api/media/presign"),
+  humanHome: extractRoute(llms, "/"),
+  humanSearch: extractRoute(llms, "/search?q=tool"),
+  humanAgent: extractRoute(llms, "/agent/atlas")
+};
 
-const feed = await readJson("/api/feed");
+assert(discoveredRoutes.feed, "llms.txt is missing /api/feed.");
+assert(discoveredRoutes.search, "llms.txt is missing /api/search?q=tool.");
+assert(discoveredRoutes.agent, "llms.txt is missing /api/agents/atlas.");
+assert(discoveredRoutes.mediaPresign, "llms.txt is missing /api/media/presign.");
+assert(discoveredRoutes.humanHome, "llms.txt is missing /.");
+assert(discoveredRoutes.humanSearch, "llms.txt is missing /search?q=tool.");
+assert(discoveredRoutes.humanAgent, "llms.txt is missing /agent/atlas.");
+
+const feed = await readJson(discoveredRoutes.feed);
 assert(Array.isArray(feed.agents), "feed.agents must be an array.");
 assert(Array.isArray(feed.posts), "feed.posts must be an array.");
 assert(feed.posts.length > 0, "feed.posts must not be empty.");
@@ -42,7 +59,7 @@ if (!isLocalBase) {
   assert(feed.warning == null, "Production feed must not include a fallback warning.");
 }
 
-const search = await readJson("/api/search?q=tool");
+const search = await readJson(discoveredRoutes.search);
 assert(Array.isArray(search.agents), "search.agents must be an array.");
 assert(Array.isArray(search.posts), "search.posts must be an array.");
 assert(typeof search.query === "string", "search.query must be a string.");
@@ -53,7 +70,7 @@ if (!isLocalBase) {
   assert(search.warning == null, "Production search must not include a fallback warning.");
 }
 
-const agent = await readJson("/api/agents/atlas");
+const agent = await readJson(discoveredRoutes.agent);
 assert(agent.agent?.handle === "atlas", "agent.handle must be atlas.");
 assert(Array.isArray(agent.agent?.tools), "agent.tools must be an array.");
 assert(Array.isArray(agent.agent?.capabilities), "agent.capabilities must be an array.");
@@ -65,6 +82,18 @@ if (!isLocalBase) {
   assert(agent.dataSource === "supabase", "Production agent route must read from Supabase.");
   assert(agent.warning == null, "Production agent route must not include a fallback warning.");
 }
+
+const [homeHtml, searchHtml, agentHtml] = await Promise.all([
+  fetch(`${baseUrl}${discoveredRoutes.humanHome}`).then((response) => response.text()),
+  fetch(`${baseUrl}${discoveredRoutes.humanSearch}`).then((response) => response.text()),
+  fetch(`${baseUrl}${discoveredRoutes.humanAgent}`).then((response) => response.text())
+]);
+
+assert(homeHtml.includes(feed.posts[0].author.name), "Human home UI is missing the first feed author.");
+assert(homeHtml.includes(feed.posts[0].task), "Human home UI is missing the first feed task.");
+assert(searchHtml.toLowerCase().includes("tool"), "Human search UI is missing the tool query.");
+assert(agentHtml.includes(agent.agent.name), "Human agent UI is missing the Atlas heading.");
+assert(agent.agent.tools.every((tool) => agentHtml.includes(tool)), "Human agent UI is missing one or more Atlas tools.");
 
 const avatarUrl = agent.agent.avatarUrl || feed.agents[0]?.avatarUrl;
 assert(typeof avatarUrl === "string" && avatarUrl.length > 0, "An avatar media URL is required for media route verification.");

@@ -300,13 +300,13 @@ export function PostCard({ post }: { post: Post }) {
   }
 
   return (
-    <article id={`post-${post.id}`} className="min-w-0 rounded-[26px] bg-white/96 p-5 shadow-[0_22px_54px_rgba(26,0,32,0.08)] ring-1 ring-[rgba(26,0,32,0.07)]">
+    <article id={`post-${post.id}`} className="min-w-0 rounded-[26px] bg-white p-5 shadow-[0_22px_54px_rgba(26,0,32,0.08)] ring-1 ring-[rgba(26,0,32,0.07)]">
       <div className="flex min-w-0 gap-4">
         <Link href={`/agent/${author.handle}`} className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full ${author.color} text-sm font-bold text-white shadow-[0_10px_26px_rgba(26,0,32,0.16)]`}>
           {author.avatarUrl ? <Image src={author.avatarUrl} alt="" width={48} height={48} className="h-full w-full object-cover" unoptimized /> : author.avatar}
         </Link>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1" data-contrast="post-metadata">
             <Link href={`/agent/${author.handle}`} className="text-[15px] font-extrabold text-[var(--space-950)] hover:text-[var(--violet-500)]">
               {author.name}
             </Link>
@@ -317,7 +317,9 @@ export function PostCard({ post }: { post: Post }) {
             </span>
           </div>
           <p className="mt-1 text-sm font-semibold text-[var(--mauve)]">{author.role}</p>
-          <p className="mt-4 text-[15px] leading-7 text-[var(--space-900)]">{post.body}</p>
+          <p className="mt-4 text-[15px] leading-7 text-[var(--space-900)]" data-contrast="post-text">
+            {post.body}
+          </p>
 
           <MediaBlock post={post} />
 
@@ -341,6 +343,7 @@ export function PostCard({ post }: { post: Post }) {
                 key={tag}
                 href={`/search?q=${encodeURIComponent(tag)}`}
                 className="rounded-full bg-[var(--space-100)] px-3 py-1.5 text-xs font-semibold text-[var(--space-900)] transition hover:bg-[var(--violet-500)] hover:text-white"
+                data-contrast="post-tag"
               >
                 #{tag}
               </Link>
@@ -384,6 +387,7 @@ export function PostCard({ post }: { post: Post }) {
               type="button"
               onClick={sharePost}
               className="flex items-center gap-2 rounded-full px-3 py-2 transition hover:bg-[rgba(61,152,200,0.1)] hover:text-[var(--planet-blue)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--violet-300)]"
+              data-contrast="action-button"
             >
               {shareState === "copied" ? <Check size={18} /> : <Send size={18} />}
               {shareState === "copied" ? "Copied" : "Share"}
@@ -411,6 +415,7 @@ export function PostCard({ post }: { post: Post }) {
                 placeholder={canMutate ? "Add a public reply" : "Sign in to reply"}
                 disabled={!canMutate}
                 className="min-h-[84px] flex-1 resize-none rounded-[18px] border border-[rgba(21,0,24,0.1)] bg-white px-4 py-3 text-sm text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)] disabled:cursor-not-allowed disabled:bg-[rgba(255,255,255,0.65)]"
+                data-contrast="reply-placeholder"
               />
               <button
                 type="button"
@@ -429,7 +434,7 @@ export function PostCard({ post }: { post: Post }) {
             <div className="mt-4 grid gap-3">
               {replyItems.length ? (
                 replyItems.map((reply) => (
-                  <div key={reply.id} className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[rgba(255,255,255,0.88)] px-4 py-4">
+                  <div key={reply.id} className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-white px-4 py-4">
                     <div className="flex items-center gap-2 text-xs text-[var(--mauve)]">
                       <span className={`flex h-8 w-8 items-center justify-center rounded-full ${reply.author.color} text-[11px] font-bold text-white`}>
                         {reply.author.avatar}
@@ -442,7 +447,7 @@ export function PostCard({ post }: { post: Post }) {
                   </div>
                 ))
               ) : (
-                <div className="rounded-[22px] border border-dashed border-[rgba(21,0,24,0.14)] bg-white/70 px-4 py-5 text-sm text-[var(--mauve)]">
+                <div className="rounded-[22px] border border-dashed border-[rgba(21,0,24,0.14)] bg-white px-4 py-5 text-sm text-[var(--mauve)]">
                   No replies yet. Keep the thread moving.
                 </div>
               )}

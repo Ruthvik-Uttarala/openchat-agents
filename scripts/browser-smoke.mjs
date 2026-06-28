@@ -3,9 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const baseUrl = (process.env.BASE_URL || "http://127.0.0.1:3000").replace(/\/+$/, "");
-const executablePath =
-  process.env.CHROME_EXECUTABLE_PATH ||
-  "C:/Program Files/Google/Chrome/Application/chrome.exe";
+const executablePath = process.env.CHROME_EXECUTABLE_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const isLocalBase = /127\.0\.0\.1|localhost/.test(baseUrl);
 const artifactDir = path.join(process.cwd(), "tmp", "browser-smoke");
 fs.mkdirSync(artifactDir, { recursive: true });
@@ -14,11 +12,22 @@ const viewports = [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 1024 },
   { name: "small-desktop", width: 1024, height: 768 },
-  { name: "desktop", width: 1440, height: 900 }
+  { name: "desktop", width: 1440, height: 900 },
+  { name: "wide-desktop", width: 1920, height: 1080 }
 ];
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function screenshotPath(viewport, route) {
+  return path.join(artifactDir, `${viewport}-${route}.png`);
+}
+
+async function captureFullPage(page, viewport, route) {
+  const filePath = screenshotPath(viewport, route);
+  await page.screenshot({ path: filePath, fullPage: true, animations: "disabled" });
+  return filePath;
 }
 
 async function validateNoOverflow(page, label) {
@@ -87,20 +96,107 @@ async function screenshotStats(page, rect, fileName) {
   );
 }
 
-async function validateReadableSurface(page, locator, label, expected) {
+async function validateSurfaceTone(page, locator, label, expected) {
   const box = await locator.boundingBox();
-  assert(box && box.width > 20 && box.height > 20, `${label} has no measurable bounds.`);
-  const stats = await screenshotStats(page, box, `${label.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}.png`);
+  assert(box && box.width > 40 && box.height > 40, `${label} has no measurable bounds.`);
+  const stats = await screenshotStats(page, box, `${label.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}-surface.png`);
   assert(stats, `${label} screenshot stats could not be computed.`);
 
   if (expected === "light") {
-    assert(stats.average >= 100, `${label} is darker than expected (${stats.average.toFixed(1)}).`);
-    assert(stats.contrast >= 25, `${label} lacks readable contrast (${stats.contrast.toFixed(1)}).`);
+    assert(stats.average >= 170, `${label} is darker than expected (${stats.average.toFixed(1)}).`);
+    assert(stats.darkRatio <= 0.35, `${label} contains too much dark artwork (${(stats.darkRatio * 100).toFixed(1)}%).`);
   } else {
-    assert(stats.brightRatio >= 0.02, `${label} is missing bright readable content.`);
-    assert(stats.darkRatio >= 0.2, `${label} is missing dark background separation.`);
-    assert(stats.contrast >= 80, `${label} lacks readable contrast (${stats.contrast.toFixed(1)}).`);
+    assert(stats.average <= 135, `${label} is brighter than expected (${stats.average.toFixed(1)}).`);
+    assert(stats.brightRatio >= 0.01, `${label} is missing readable bright content.`);
+    assert(stats.contrast >= 70, `${label} lacks readable contrast (${stats.contrast.toFixed(1)}).`);
   }
+}
+
+async function measureContrast(locator, label, { min = 4.5, pseudo = null } = {}) {
+  const result = await locator.first().evaluate(
+    (element, options) => {
+      function parseColor(input) {
+        if (!input) return null;
+        const match = input.match(/rgba?\(([^)]+)\)/i);
+        if (!match) return null;
+        const parts = match[1]
+          .split(",")
+          .map((part) => part.trim())
+          .map((part, index) => (index < 3 ? Number(part) : Number(part)));
+        if (parts.length < 3 || parts.some((part, index) => index < 3 && Number.isNaN(part))) return null;
+        return [parts[0], parts[1], parts[2], parts.length >= 4 && !Number.isNaN(parts[3]) ? parts[3] : 1];
+      }
+
+      function composite(top, bottom) {
+        const alpha = top[3] + bottom[3] * (1 - top[3]);
+        if (alpha <= 0) return [255, 255, 255, 0];
+        return [
+          (top[0] * top[3] + bottom[0] * bottom[3] * (1 - top[3])) / alpha,
+          (top[1] * top[3] + bottom[1] * bottom[3] * (1 - top[3])) / alpha,
+          (top[2] * top[3] + bottom[2] * bottom[3] * (1 - top[3])) / alpha,
+          alpha
+        ];
+      }
+
+      function relativeLuminance(color) {
+        const convert = (value) => {
+          const normalized = value / 255;
+          return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        };
+
+        return 0.2126 * convert(color[0]) + 0.7152 * convert(color[1]) + 0.0722 * convert(color[2]);
+      }
+
+      function contrastRatio(foreground, background) {
+        const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background));
+        const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background));
+        return (lighter + 0.05) / (darker + 0.05);
+      }
+
+      function resolvedBackground(node) {
+        const surfaceRoot =
+          node.closest("button, a, input, textarea, article, .space-window, .space-hero, .space-banner, .space-rail") || node;
+        let current = surfaceRoot;
+        const layers = [];
+
+        while (current) {
+          const style = getComputedStyle(current);
+          const parsed = parseColor(style.backgroundColor);
+          if (parsed && parsed[3] > 0) {
+            layers.push(parsed);
+          }
+          current = current.parentElement;
+        }
+
+        let color = [255, 255, 255, 1];
+        for (let index = layers.length - 1; index >= 0; index -= 1) {
+          color = composite(layers[index], color);
+        }
+
+        return color;
+      }
+
+      const style = getComputedStyle(element, options?.pseudo ?? undefined);
+      const foreground = parseColor(style.color);
+      const background = resolvedBackground(element);
+      if (!foreground) return null;
+
+      return {
+        ratio: contrastRatio(foreground, background),
+        foreground: foreground.slice(0, 3),
+        background: background.slice(0, 3)
+      };
+    },
+    { pseudo }
+  );
+
+  assert(result, `${label} contrast could not be measured.`);
+  assert(
+    result.ratio >= min,
+    `${label} contrast is ${result.ratio.toFixed(2)}:1, below the required ${min.toFixed(1)}:1.`
+  );
+
+  return result;
 }
 
 async function validateLayering(page, label) {
@@ -109,33 +205,18 @@ async function validateLayering(page, label) {
     if (!root) return null;
     const before = getComputedStyle(root, "::before");
     const after = getComputedStyle(root, "::after");
-    const childZ = Array.from(root.children)
-      .slice(0, 8)
-      .map((element) => {
-        const style = getComputedStyle(element);
-        return {
-          tag: element.tagName.toLowerCase(),
-          zIndex: style.zIndex,
-          position: style.position
-        };
-      });
 
     return {
-      before: { zIndex: before.zIndex, pointerEvents: before.pointerEvents, position: before.position },
-      after: { zIndex: after.zIndex, pointerEvents: after.pointerEvents, position: after.position },
-      childZ
+      before: { content: before.content, pointerEvents: before.pointerEvents, zIndex: before.zIndex },
+      after: { content: after.content, pointerEvents: after.pointerEvents, zIndex: after.zIndex }
     };
   });
 
   assert(layering, `${label} is missing .space-page.`);
-  assert(layering.before.pointerEvents === "none", `${label} before overlay must ignore pointer events.`);
-  assert(layering.after.pointerEvents === "none", `${label} after overlay must ignore pointer events.`);
-  assert(Number(layering.before.zIndex || "0") <= 0, `${label} before overlay is stacked above content.`);
-  assert(Number(layering.after.zIndex || "0") <= 0, `${label} after overlay is stacked above content.`);
-  assert(
-    layering.childZ.some((entry) => (entry.zIndex === "auto" ? 0 : Number(entry.zIndex || "0")) >= 1),
-    `${label} content is not stacked above decorative artwork.`
-  );
+  const beforeDisabled = layering.before.content === "none" || layering.before.content === '""';
+  const afterDisabled = layering.after.content === "none" || layering.after.content === '""';
+  assert(beforeDisabled, `${label} still renders a page-level ::before overlay.`);
+  assert(afterDisabled, `${label} still renders a page-level ::after overlay.`);
 }
 
 async function validateKeyboardFocus(page, label) {
@@ -146,9 +227,6 @@ async function validateKeyboardFocus(page, label) {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return {
-      tag: element.tagName.toLowerCase(),
-      width: rect.width,
-      height: rect.height,
       visible: rect.width > 0 && rect.height > 0,
       outlineStyle: style.outlineStyle,
       outlineWidth: style.outlineWidth,
@@ -157,95 +235,121 @@ async function validateKeyboardFocus(page, label) {
   });
 
   assert(focused?.visible, `${label} keyboard focus is not visible.`);
+  assert(
+    focused.outlineStyle !== "none" || focused.boxShadow !== "none" || focused.outlineWidth !== "0px",
+    `${label} focused control has no visible focus treatment.`
+  );
 }
 
-async function validateHome(page, label) {
+async function validateHome(page, viewportName) {
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
-  await page.waitForTimeout(500);
-  await validateNoOverflow(page, `${label} home`);
-  await validateLayering(page, `${label} home`);
-  const heroHeading = page.getByRole("heading", { name: /agent work, in public, at machine speed/i });
-  await heroHeading.waitFor();
-  await validateReadableSurface(page, heroHeading, `${label} home hero`, "dark");
+  await page.waitForTimeout(400);
+  await captureFullPage(page, viewportName, "home");
+  await validateNoOverflow(page, `${viewportName} home`);
+  await validateLayering(page, `${viewportName} home`);
+
+  const hero = page.locator(".space-hero").first();
+  await validateSurfaceTone(page, hero, `${viewportName} home hero`, "dark");
+  await measureContrast(page.locator('[data-contrast="hero-paragraph"]').first(), `${viewportName} hero paragraph`);
+  await measureContrast(page.locator('[data-contrast="hero-stat-label"]').first(), `${viewportName} hero stat label`);
+  await measureContrast(page.getByRole("link", { name: /search the graph/i }).first(), `${viewportName} hero action`, { min: 3 });
+
   const firstPost = page.locator("article").first();
   await firstPost.scrollIntoViewIfNeeded();
   await page.waitForTimeout(200);
-  await validateReadableSurface(page, firstPost, `${label} home first post`, "light");
-  await validateKeyboardFocus(page, `${label} home`);
+  await validateSurfaceTone(page, firstPost, `${viewportName} first post`, "light");
+  await measureContrast(firstPost.locator('[data-contrast="post-text"]').first(), `${viewportName} post text`);
+  await measureContrast(firstPost.locator('[data-contrast="post-metadata"]').first(), `${viewportName} post metadata`);
+  await measureContrast(firstPost.locator('[data-contrast="post-tag"]').first(), `${viewportName} post tag`, { min: 3 });
+  await measureContrast(firstPost.locator('[data-contrast="reply-placeholder"]').first(), `${viewportName} reply placeholder`, {
+    pseudo: "::placeholder"
+  });
+  await measureContrast(firstPost.locator('[data-contrast="action-button"]').first(), `${viewportName} share button`, { min: 3 });
 
-  const postShare = page.getByRole("button", { name: /^share$/i }).first();
-  if (await postShare.isVisible().catch(() => false)) {
-    await postShare.click();
-    await page.waitForTimeout(300);
+  const showThread = firstPost.getByRole("button", { name: /show thread|hide thread/i }).first();
+  if (await showThread.isVisible().catch(() => false)) {
+    await showThread.click();
+    await page.waitForTimeout(250);
   }
+  await captureFullPage(page, viewportName, "thread");
+  await validateKeyboardFocus(page, `${viewportName} home`);
 
   const authButton = page.getByRole("button", { name: /continue with google/i });
-  if (label === "desktop" && (await authButton.isVisible().catch(() => false))) {
+  if (["desktop", "wide-desktop"].includes(viewportName) && (await authButton.isVisible().catch(() => false))) {
     await authButton.click();
     await page.waitForTimeout(1500);
     const currentUrl = page.url();
     const authError = await page.getByText(/add supabase env vars/i).isVisible().catch(() => false);
-    if (authError && isLocalBase) {
-      return;
+    if (!(authError && isLocalBase)) {
+      assert(!authError, `${viewportName} Google auth is not configured.`);
+      assert(
+        currentUrl.includes("accounts.google.com") || currentUrl.includes("/auth/v1/authorize") || currentUrl.includes("google"),
+        `${viewportName} Google auth did not redirect to an OAuth entrypoint.`
+      );
     }
-    assert(!authError, `${label} Google auth is not configured.`);
-    assert(
-      currentUrl.includes("accounts.google.com") || currentUrl.includes("/auth/v1/authorize") || currentUrl.includes("google"),
-      `${label} Google auth did not redirect to an OAuth entrypoint.`
-    );
     await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
   }
 
   const likeStatus = await page.evaluate(async (origin) => {
     const response = await fetch(`${origin}/api/posts/00000000-0000-4000-8000-000000001001/like`, { method: "POST" });
     return response.status;
   }, baseUrl);
-  assert([401, 503].includes(likeStatus), `${label} unauthenticated like returned ${likeStatus} instead of 401/503.`);
+  assert([401, 503].includes(likeStatus), `${viewportName} unauthenticated like returned ${likeStatus} instead of 401/503.`);
 }
 
-async function validateSearch(page, label) {
+async function validateSearch(page, viewportName) {
   await page.goto(`${baseUrl}/search?q=tool`, { waitUntil: "networkidle" });
-  await page.waitForTimeout(500);
-  await validateNoOverflow(page, `${label} search`);
-  await validateLayering(page, `${label} search`);
-  const heading = page.getByRole("heading", { name: /discover agents, tools, and work traces/i });
-  await heading.waitFor();
-  await validateReadableSurface(page, heading, `${label} search heading`, "light");
-  const searchForm = page.locator("form").first();
-  await validateReadableSurface(page, searchForm, `${label} search form`, "light");
+  await page.waitForTimeout(400);
+  await captureFullPage(page, viewportName, "search");
+  await validateNoOverflow(page, `${viewportName} search`);
+  await validateLayering(page, `${viewportName} search`);
+
+  const banner = page.locator(".space-banner").first();
+  await validateSurfaceTone(page, banner, `${viewportName} search banner`, "dark");
+  await measureContrast(page.locator('[data-contrast="search-placeholder"]').first(), `${viewportName} search placeholder`, {
+    pseudo: "::placeholder"
+  });
+
+  const searchControls = page.locator("form").first();
+  await validateSurfaceTone(page, searchControls, `${viewportName} search controls`, "light");
+
   const resultsPanel = page.locator(".space-window").nth(1);
-  if (await resultsPanel.count()) {
-    await validateReadableSurface(page, resultsPanel, `${label} search results`, "light");
+  await validateSurfaceTone(page, resultsPanel, `${viewportName} search results`, "light");
+  const rightRailSecondary = page.locator('[data-contrast="right-rail-secondary"]').first();
+  if ((await rightRailSecondary.count()) > 0 && (await rightRailSecondary.isVisible().catch(() => false))) {
+    await measureContrast(rightRailSecondary, `${viewportName} right rail secondary`);
   }
 }
 
-async function validateProfile(page, label) {
+async function validateProfile(page, viewportName) {
   await page.goto(`${baseUrl}/agent/atlas`, { waitUntil: "networkidle" });
-  await page.waitForTimeout(500);
-  await validateNoOverflow(page, `${label} profile`);
-  await validateLayering(page, `${label} profile`);
-  const heading = page.getByRole("heading", { name: "Atlas" });
-  await heading.waitFor();
-  await validateReadableSurface(page, heading, `${label} profile heading`, "dark");
-  const profilePanelLink = page.getByRole("link", { name: /agent api/i }).first();
-  if (await profilePanelLink.count()) {
-    await profilePanelLink.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(200);
-    await validateReadableSurface(page, profilePanelLink, `${label} profile panel`, "light");
-  }
+  await page.waitForTimeout(400);
+  await captureFullPage(page, viewportName, "agent-atlas");
+  await validateNoOverflow(page, `${viewportName} profile`);
+  await validateLayering(page, `${viewportName} profile`);
+
+  const banner = page.locator(".space-banner").first();
+  await validateSurfaceTone(page, banner, `${viewportName} profile banner`, "dark");
+  await measureContrast(page.locator('[data-contrast="agent-status-note"]').first(), `${viewportName} agent status note`);
+  await measureContrast(page.getByRole("link", { name: /back to feed/i }).first(), `${viewportName} profile back link`, {
+    min: 3
+  });
+
+  const firstInfoCard = page.locator(".space-window").filter({ has: page.getByText("Tools") }).first();
+  await validateSurfaceTone(page, firstInfoCard, `${viewportName} profile info card`, "light");
 
   const shareButton = page.getByRole("button", { name: /^share$/i }).first();
   if (await shareButton.isVisible().catch(() => false)) {
     await shareButton.click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(200);
   }
 
   const followStatus = await page.evaluate(async (origin) => {
     const response = await fetch(`${origin}/api/agents/atlas/follow`, { method: "POST" });
     return response.status;
   }, baseUrl);
-  assert([401, 503].includes(followStatus), `${label} unauthenticated follow returned ${followStatus} instead of 401/503.`);
+  assert([401, 503].includes(followStatus), `${viewportName} unauthenticated follow returned ${followStatus} instead of 401/503.`);
 }
 
 const browser = await chromium.launch({
@@ -271,6 +375,7 @@ try {
       const text = msg.text();
       if (isLocalBase && text.includes("/_vercel/speed-insights/script.js")) return;
       if (/Failed to load resource: the server responded with a status of 401/i.test(text)) return;
+      if (isLocalBase && /Failed to load resource: the server responded with a status of 503/i.test(text)) return;
       if (/Failed to load resource: the server responded with a status of 404/i.test(text)) return;
       consoleErrors.push(text);
     });
@@ -278,6 +383,7 @@ try {
       const url = request.url();
       if (url.includes("_rsc=")) return;
       if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
+      if (isLocalBase && request.method() === "POST" && /\/api\/(posts|agents)\//.test(url)) return;
       failedRequests.push(`${request.method()} ${url} :: ${request.failure()?.errorText ?? "failed"}`);
     });
     page.on("response", (response) => {
@@ -287,7 +393,7 @@ try {
       const method = response.request().method();
       if (url.includes("_rsc=")) return;
       if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
-      if (status >= 400 && !(status === 401 && method === "POST")) {
+      if (status >= 400 && !(status === 401 && method === "POST") && !(isLocalBase && status === 503 && method === "POST")) {
         httpFailures.push(`${status} ${method} ${url}`);
       }
     });
@@ -300,17 +406,9 @@ try {
       failures.push(`${viewport.name}: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    if (consoleErrors.length) {
-      failures.push(`${viewport.name}: console errors -> ${consoleErrors.join(" | ")}`);
-    }
-
-    if (failedRequests.length) {
-      failures.push(`${viewport.name}: request failures -> ${failedRequests.join(" | ")}`);
-    }
-
-    if (httpFailures.length) {
-      failures.push(`${viewport.name}: http failures -> ${httpFailures.join(" | ")}`);
-    }
+    if (consoleErrors.length) failures.push(`${viewport.name}: console errors -> ${consoleErrors.join(" | ")}`);
+    if (failedRequests.length) failures.push(`${viewport.name}: request failures -> ${failedRequests.join(" | ")}`);
+    if (httpFailures.length) failures.push(`${viewport.name}: http failures -> ${httpFailures.join(" | ")}`);
 
     summary.push({
       viewport: viewport.name,
@@ -326,8 +424,31 @@ try {
 }
 
 if (failures.length) {
-  console.error(JSON.stringify({ ok: false, baseUrl, failures, summary }, null, 2));
+  console.error(
+    JSON.stringify(
+      {
+        ok: false,
+        baseUrl,
+        artifactDir,
+        failures,
+        summary
+      },
+      null,
+      2
+    )
+  );
   process.exit(1);
 }
 
-console.log(JSON.stringify({ ok: true, baseUrl, summary }, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      ok: true,
+      baseUrl,
+      artifactDir,
+      summary
+    },
+    null,
+    2
+  )
+);

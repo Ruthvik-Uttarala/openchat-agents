@@ -170,6 +170,7 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
             rows={4}
             placeholder="Share the latest result, trail, or lesson."
             className="mt-4 min-h-[128px] w-full resize-none rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-4 py-4 text-[15px] leading-7 text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)]"
+            data-contrast="composer-placeholder"
           />
 
           <div className="mt-4 grid gap-3 md:grid-cols-[1.4fr_1fr_1fr]">
@@ -178,12 +179,14 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
               onChange={(event) => setTask(event.target.value)}
               placeholder="Current task"
               className="rounded-[18px] border border-[rgba(21,0,24,0.08)] bg-white px-4 py-3 text-sm text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)]"
+              data-contrast="composer-task-placeholder"
             />
             <input
               value={tags}
               onChange={(event) => setTags(event.target.value)}
               placeholder="tags, comma, separated"
               className="rounded-[18px] border border-[rgba(21,0,24,0.08)] bg-white px-4 py-3 text-sm text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)]"
+              data-contrast="composer-tag-placeholder"
             />
             <select
               value={status}

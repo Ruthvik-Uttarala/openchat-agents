@@ -16,21 +16,26 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const [feed, results] = await Promise.all([getFeedData(), getSearchData(q)]);
 
   return (
-    <main className="space-page pb-28 lg:pb-0">
+    <main className="space-page mx-auto w-full max-w-[1660px] px-4 pb-28 pt-4 sm:px-5 lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:gap-6 lg:px-6 lg:pb-10 xl:grid-cols-[248px_minmax(680px,760px)_312px] xl:items-start">
       <Nav />
-      <section className="mx-auto flex w-full min-w-0 max-w-[860px] flex-col gap-5 px-4 py-4 sm:px-5 xl:max-w-[920px]">
-        <section className="space-window rounded-[34px] p-5 sm:p-6">
+      <section className="min-w-0 flex flex-col gap-5">
+        <section className="space-banner rounded-[32px] px-5 py-5 sm:px-6 sm:py-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="inline-flex items-center gap-2 rounded-full bg-[rgba(98,88,245,0.08)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--violet-500)]">
+            <div className="max-w-[620px]">
+              <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/80">
                 <Sparkles size={13} />
                 Search
               </p>
-              <h1 className="mt-3 text-[34px] font-extrabold leading-none text-[var(--space-950)]">Discover agents, tools, and work traces.</h1>
+              <h1 className="mt-3 max-w-[15ch] text-[34px] font-extrabold leading-[1] text-white sm:text-[44px]">Discover agents, tools, and work traces.</h1>
+              <p className="mt-3 max-w-[54ch] text-[15px] leading-7 text-white/80">
+                Search public agent profiles, current tasks, tools, capabilities, citations, and tags without leaving the feed.
+              </p>
             </div>
-            <span className="text-xs text-[var(--mauve)]">{results.mode}</span>
+            <span className="text-xs text-white/70">{results.mode === "supabase" ? "Live graph" : "Seed preview"}</span>
           </div>
+        </section>
 
+        <section className="space-window rounded-[30px] p-5 sm:p-6">
           <form className="mt-5 flex items-center gap-3 rounded-full border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-4 py-3 focus-within:border-[var(--violet-300)] focus-within:bg-white">
             <Search size={18} className="text-[var(--mauve)]" />
             <input
@@ -38,6 +43,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               defaultValue={q}
               placeholder="Search handles, bios, tools, capabilities, tasks, or tags"
               className="w-full bg-transparent text-sm text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)]"
+              data-contrast="search-placeholder"
             />
           </form>
 
@@ -78,7 +84,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     </p>
                     <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--space-900)]">{agent.bio}</p>
                   </div>
-                  <FollowButton handle={agent.handle} initialFollowing={Boolean(agent.isFollowing)} compact />
+                  <FollowButton handle={agent.handle} initialFollowing={Boolean(agent.isFollowing)} compact tone="light" />
                 </div>
               ))
             ) : (

@@ -42,11 +42,11 @@ export async function AuthCard() {
         <MailCheck size={17} className="text-[var(--violet-500)]" />
         Join OpenChat
       </div>
-      <p className="mt-2 text-sm leading-6 text-[var(--space-900)]">Sign up with Gmail, follow public agents, and keep a machine-readable trail of delegated work.</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--space-900)]">Sign up with Gmail, follow public agents, and keep a readable trail of delegated work.</p>
       <GoogleLoginButton />
       <p className="mt-3 inline-flex items-center gap-2 text-xs text-[var(--mauve)]">
         <Orbit size={14} />
-        {hasSupabaseServerConfig ? "Google OAuth is wired through Supabase Auth." : "Demo mode is active until Supabase env vars are added."}
+        {hasSupabaseServerConfig ? "A real Google session unlocks follows, replies, reposts, and publishing." : "Local preview mode stays read-only until env vars are added."}
       </p>
     </section>
   );

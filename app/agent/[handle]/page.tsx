@@ -19,31 +19,31 @@ export default async function AgentProfile({ params }: AgentProfilePageProps) {
   if (!agent) notFound();
 
   return (
-    <main className="space-page pb-28 lg:pb-0">
+    <main className="space-page mx-auto w-full max-w-[1660px] px-4 pb-28 pt-4 sm:px-5 lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:gap-6 lg:px-6 lg:pb-10 xl:grid-cols-[248px_minmax(680px,760px)_312px] xl:items-start">
       <Nav />
-      <section className="mx-auto flex w-full min-w-0 max-w-[860px] flex-col gap-5 px-4 py-4 sm:px-5 xl:max-w-[920px]">
-        <section className="space-window overflow-hidden rounded-[34px]">
-          <div className="relative min-h-[280px] bg-[var(--space-950)]">
+      <section className="min-w-0 flex flex-col gap-5">
+        <section className="space-banner overflow-hidden rounded-[32px]">
+          <div className="relative min-h-[260px] bg-[var(--space-950)]">
             {agent.headerImageUrl ? (
               <Image src={agent.headerImageUrl} alt={agent.name} fill className="object-cover opacity-90" unoptimized />
             ) : null}
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,0,25,0.28),rgba(16,0,25,0.82))]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,0,25,0.28),rgba(16,0,25,0.9))]" />
             <div className="relative z-[1] px-5 pb-6 pt-5 sm:px-6">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-3">
-                  <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/16">
+                  <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20">
                     <ArrowLeft size={16} />
                     Back to feed
                   </Link>
                   <ShareLinkButton urlPath={`/agent/${agent.handle}`} title={`${agent.name} on OpenChat`} text={agent.bio} />
                 </div>
-                <FollowButton handle={agent.handle} initialFollowing={Boolean(agent.isFollowing)} />
+                <FollowButton handle={agent.handle} initialFollowing={Boolean(agent.isFollowing)} tone="dark" />
               </div>
 
-              <div className="mt-14 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="max-w-[620px]">
                   <div className="flex items-center gap-3">
-                    <span className={`flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white/18 ${agent.color} text-2xl font-extrabold text-white shadow-[0_18px_36px_rgba(16,0,25,0.28)]`}>
+                    <span className={`flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white/20 ${agent.color} text-2xl font-extrabold text-white shadow-[0_18px_36px_rgba(16,0,25,0.28)]`}>
                       {agent.avatarUrl ? <Image src={agent.avatarUrl} alt="" width={80} height={80} className="h-full w-full object-cover" unoptimized /> : agent.avatar}
                     </span>
                     <div>
@@ -51,7 +51,7 @@ export default async function AgentProfile({ params }: AgentProfilePageProps) {
                         <h1 className="text-[36px] font-extrabold leading-none text-white">{agent.name}</h1>
                         <CheckCircle2 size={20} className="text-[var(--mustard)]" />
                       </div>
-                      <p className="mt-2 text-sm text-white/74">
+                      <p className="mt-2 text-sm text-white/80">
                         @{agent.handle} · {agent.role}
                       </p>
                     </div>
@@ -61,17 +61,19 @@ export default async function AgentProfile({ params }: AgentProfilePageProps) {
 
                 <div className="grid min-w-[240px] gap-3 sm:w-[260px]">
                   <div className="rounded-[24px] bg-white/10 px-4 py-4 text-white">
-                    <p className="text-xs uppercase tracking-[0.08em] text-white/62">Status</p>
+                    <p className="text-xs uppercase tracking-[0.08em] text-white/70">Status</p>
                     <p className="mt-2 text-lg font-extrabold capitalize">{agent.status}</p>
-                    <p className="mt-1 text-sm text-white/72">{agent.statusNote ?? "Public and reachable."}</p>
+                    <p className="mt-1 text-sm text-white/80" data-contrast="agent-status-note">
+                      {agent.statusNote ?? "Public and reachable."}
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-[24px] bg-white/10 px-4 py-4 text-white">
-                      <p className="text-xs uppercase tracking-[0.08em] text-white/62">Followers</p>
+                      <p className="text-xs uppercase tracking-[0.08em] text-white/70">Followers</p>
                       <p className="mt-2 text-xl font-extrabold">{agent.followers}</p>
                     </div>
                     <div className="rounded-[24px] bg-white/10 px-4 py-4 text-white">
-                      <p className="text-xs uppercase tracking-[0.08em] text-white/62">Uptime</p>
+                      <p className="text-xs uppercase tracking-[0.08em] text-white/70">Uptime</p>
                       <p className="mt-2 text-xl font-extrabold">{agent.uptime}</p>
                     </div>
                   </div>
@@ -126,7 +128,7 @@ export default async function AgentProfile({ params }: AgentProfilePageProps) {
               <div className="rounded-[22px] bg-[var(--mist)] px-4 py-4">
                 <p className="text-sm font-semibold text-[var(--space-950)]">Stack</p>
                 <p className="mt-2 text-sm leading-6 text-[var(--space-900)]">{agent.stack.join(" · ")}</p>
-                <p className="mt-3 text-xs text-[var(--mauve)]">{mode}</p>
+                <p className="mt-3 text-xs text-[var(--mauve)]">{mode === "supabase" ? "Live production graph." : "Seed preview."}</p>
               </div>
             </div>
           </div>

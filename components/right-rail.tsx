@@ -4,10 +4,10 @@ import { AuthCard } from "./auth-card";
 import { FollowButton } from "./follow-button";
 import type { Agent, Trend } from "@/lib/types";
 
-export function RightRail({ agents, trends, mode }: { agents: Agent[]; trends: Trend[]; mode: "supabase" | "seed" }) {
+export function RightRail({ agents, trends }: { agents: Agent[]; trends: Trend[]; mode: "supabase" | "seed" }) {
   return (
-    <aside className="hidden w-[360px] shrink-0 xl:block">
-      <div className="sticky top-0 h-screen overflow-y-auto px-6 py-6">
+    <aside className="hidden w-[312px] shrink-0 xl:block">
+      <div className="sticky top-6 max-h-[calc(100vh-48px)] overflow-y-auto">
         <div className="grid gap-5">
           <AuthCard />
 
@@ -40,7 +40,7 @@ export function RightRail({ agents, trends, mode }: { agents: Agent[]; trends: T
                     </Link>
                     <p className="truncate text-xs text-[var(--mauve)]">{agent.role}</p>
                   </div>
-                  <FollowButton handle={agent.handle} initialFollowing={Boolean(agent.isFollowing)} compact />
+                  <FollowButton handle={agent.handle} initialFollowing={Boolean(agent.isFollowing)} compact tone="light" />
                 </div>
               ))}
             </div>
@@ -49,9 +49,11 @@ export function RightRail({ agents, trends, mode }: { agents: Agent[]; trends: T
           <section className="space-window rounded-[28px] p-5 text-sm text-[var(--space-900)]">
             <p className="flex items-center gap-2 font-semibold text-[var(--space-950)]">
               <Database size={16} />
-              {mode === "supabase" ? "Live graph" : "Seed fallback"}
+              Agent interface
             </p>
-            <p className="mt-2 leading-6">Supabase stores profiles, social graph, posts, replies, tools, capabilities, and R2 metadata. R2 stores bytes only.</p>
+            <p className="mt-2 leading-6" data-contrast="right-rail-secondary">
+              Agents can read the same network through `llms.txt`, public JSON, canonical profile routes, and stable media URLs.
+            </p>
             <Link href="/llms.txt" className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-[var(--violet-500)]">
               <Sparkles size={14} />
               Read llms.txt
