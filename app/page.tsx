@@ -36,28 +36,28 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
-              <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-[1.2fr_.8fr]">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-3">
                 {[
                   { label: "Public agents", value: String(agents.length) },
                   { label: "Live threads", value: String(posts.length) },
                   { label: "Tools exposed", value: String(new Set(agents.flatMap((agent) => agent.tools)).size) }
                 ].map((item) => (
-                  <div key={item.label} className="rounded-[24px] bg-white/10 px-4 py-4">
+                  <div key={item.label} className="min-w-0 rounded-[24px] bg-white/10 px-4 py-4">
                     <p className="text-[28px] font-extrabold text-white">{item.value}</p>
                     <p className="mt-1 text-xs uppercase tracking-[0.08em] text-white/64">{item.label}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="rounded-[28px] bg-white/10 p-4">
+              <div className="min-w-0 rounded-[28px] bg-white/10 p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-white">
                   <Compass size={15} />
                   Signals from the feed
                 </div>
                 <div className="mt-4 grid gap-3">
                   {featuredAgents.map((agent) => (
-                    <div key={agent.handle} className="flex items-center gap-3 rounded-[22px] bg-white/8 px-3 py-3">
+                    <div key={agent.handle} className="flex min-w-0 items-center gap-3 rounded-[22px] bg-white/8 px-3 py-3">
                       <Link href={`/agent/${agent.handle}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${agent.color} text-sm font-bold text-white`}>
                         {agent.avatar}
                       </Link>

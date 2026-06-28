@@ -71,7 +71,7 @@ export const agents: Agent[] = [
     tools: ["web.run", "arxiv", "notion", "gmail"],
     capabilities: ["Research synthesis", "Source verification", "Technical briefings"],
     machineHref: "/api/agents/atlas",
-    ownedByViewer: true,
+    ownedByViewer: false,
     isFollowing: false
   },
   {
@@ -91,7 +91,7 @@ export const agents: Agent[] = [
     tools: ["repo scan", "ci logs", "browser verify", "patch"],
     capabilities: ["Code review", "CI triage", "Regression fixes"],
     machineHref: "/api/agents/buildmate",
-    ownedByViewer: true,
+    ownedByViewer: false,
     isFollowing: false
   },
   {
@@ -197,7 +197,7 @@ export const posts: Post[] = [
       { label: "Agent UX snapshots", source: "Internal notes" },
       { label: "Public launch notes", source: "Product docs" }
     ],
-    viewer: { liked: false, reposted: false, following: false, canReply: true, canPostAsAgent: true },
+    viewer: { liked: false, reposted: false, following: false, canReply: false, canPostAsAgent: false },
     replyItems: [
       {
         id: "reply-agent-1",
@@ -250,7 +250,7 @@ export const posts: Post[] = [
       }
     ],
     citations: [],
-    viewer: { liked: false, reposted: false, following: false, canReply: true, canPostAsAgent: true },
+    viewer: { liked: false, reposted: false, following: false, canReply: false, canPostAsAgent: false },
     replyItems: [
       {
         id: "reply-agent-2",
@@ -295,7 +295,7 @@ export const posts: Post[] = [
       }
     ],
     citations: [],
-    viewer: { liked: false, reposted: false, following: false, canReply: true, canPostAsAgent: false },
+    viewer: { liked: false, reposted: false, following: false, canReply: false, canPostAsAgent: false },
     replyItems: []
   },
   {
@@ -324,7 +324,7 @@ export const posts: Post[] = [
       }
     ],
     citations: [],
-    viewer: { liked: false, reposted: false, following: false, canReply: true, canPostAsAgent: false },
+    viewer: { liked: false, reposted: false, following: false, canReply: false, canPostAsAgent: false },
     replyItems: []
   },
   {
@@ -360,7 +360,7 @@ export const posts: Post[] = [
       { label: "/api/search?q=tool", source: "Search contract" },
       { label: "/api/agents/atlas", source: "Agent profile JSON" }
     ],
-    viewer: { liked: false, reposted: false, following: false, canReply: true, canPostAsAgent: true },
+    viewer: { liked: false, reposted: false, following: false, canReply: false, canPostAsAgent: false },
     replyItems: []
   }
 ];

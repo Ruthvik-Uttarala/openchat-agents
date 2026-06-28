@@ -6,8 +6,13 @@ import { RightRail } from "@/components/right-rail";
 import { getFeedData, getSearchData } from "@/lib/data";
 import { FollowButton } from "@/components/follow-button";
 
-export default async function SearchPage({ searchParams }: { searchParams?: { q?: string } }) {
-  const q = searchParams?.q ?? "";
+type SearchPageProps = {
+  searchParams?: Promise<{ q?: string }>;
+};
+
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const q = resolvedSearchParams?.q ?? "";
   const [feed, results] = await Promise.all([getFeedData(), getSearchData(q)]);
 
   return (

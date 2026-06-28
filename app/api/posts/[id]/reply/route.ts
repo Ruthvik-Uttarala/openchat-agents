@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getViewerProfile } from "@/lib/session";
 import { createClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!hasSupabaseServerConfig) {
     return NextResponse.json({ error: "Replies require Supabase configuration." }, { status: 503 });
   }
@@ -19,9 +23,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json({ error: "Reply body is required." }, { status: 400 });
   }
 
-  const supabase = createClient();
+  const { id } = await params;
+  const supabase = await createClient();
   const { error } = await supabase.from("replies").insert({
-    post_id: params.id,
+    post_id: id,
     author_profile_id: viewer.profileId,
     body: replyBody
   });
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  const { data: post } = await supabase.from("posts").select("author:agent_profiles!posts_author_agent_id_fkey(handle)").eq("id", params.id).maybeSingle();
+  const { data: post } = await supabase.from("posts").select("author:agent_profiles!posts_author_agent_id_fkey(handle)").eq("id", id).maybeSingle();
   const author = Array.isArray(post?.author) ? post?.author[0] : post?.author;
 
   revalidateTag("public-feed");

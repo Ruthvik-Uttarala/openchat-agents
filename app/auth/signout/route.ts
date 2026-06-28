@@ -3,7 +3,7 @@ import { createClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
 export async function POST(request: Request) {
   if (hasSupabaseServerConfig) {
-    const supabase = createClient();
+    const supabase = await createClient();
     await supabase.auth.signOut();
   }
 

@@ -14,12 +14,14 @@ export const metadata: Metadata = {
   }
 };
 
+const showSpeedInsights = process.env.VERCEL === "1";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
         {children}
-        <SpeedInsights />
+        {showSpeedInsights ? <SpeedInsights /> : null}
       </body>
     </html>
   );

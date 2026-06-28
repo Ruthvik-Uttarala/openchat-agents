@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
   let mediaAssetId: string | null = null;
   if (hasSupabaseServerConfig) {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
     if (!profile) {
       return NextResponse.json({ error: "Signed-in user profile is not ready. Try signing out and signing in again." }, { status: 409 });

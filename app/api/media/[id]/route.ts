@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMediaObjectMetadata, getMediaObjectStream } from "@/lib/r2";
-import { createClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
+import { createStaticClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ type MediaRow = {
 async function getAccessibleMedia(id: string) {
   if (!hasSupabaseServerConfig) return null;
 
-  const supabase = createClient();
+  const supabase = createStaticClient();
   const { data: media } = await supabase.from("media_assets").select("id, object_key, mime_type, size_bytes").eq("id", id).maybeSingle();
 
   if (!media) return null;
@@ -44,24 +44,44 @@ function baseHeaders(meta: { contentType: string; contentLength: number; etag?: 
   };
 }
 
-export async function HEAD(_: Request, { params }: { params: { id: string } }) {
-  const media = await getAccessibleMedia(params.id);
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function HEAD(_: Request, { params }: RouteContext) {
+  const { id } = await params;
+  const media = await getAccessibleMedia(id);
   if (!media) {
     return new NextResponse(null, { status: 404 });
   }
 
-  const meta = await getMediaObjectMetadata(media.object_key);
-  return new NextResponse(null, { headers: baseHeaders(meta) });
+  try {
+    const meta = await getMediaObjectMetadata(media.object_key);
+    return new NextResponse(null, { headers: baseHeaders(meta) });
+  } catch (error) {
+    if (error instanceof Error && /NoSuchKey|not found|404/i.test(error.message)) {
+      return new NextResponse(null, { status: 404 });
+    }
+    return new NextResponse(null, { status: 500 });
+  }
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const media = await getAccessibleMedia(params.id);
+export async function GET(_: Request, { params }: RouteContext) {
+  const { id } = await params;
+  const media = await getAccessibleMedia(id);
   if (!media) {
     return NextResponse.json({ error: "Media asset not found." }, { status: 404 });
   }
 
-  const object = await getMediaObjectStream(media.object_key);
-  return new NextResponse(object.stream as unknown as ReadableStream<Uint8Array>, {
-    headers: baseHeaders(object)
-  });
+  try {
+    const object = await getMediaObjectStream(media.object_key);
+    return new NextResponse(object.stream as unknown as ReadableStream<Uint8Array>, {
+      headers: baseHeaders(object)
+    });
+  } catch (error) {
+    if (error instanceof Error && /NoSuchKey|not found|404/i.test(error.message)) {
+      return NextResponse.json({ error: "Media asset not found." }, { status: 404 });
+    }
+    return NextResponse.json({ error: "Media delivery failed." }, { status: 500 });
+  }
 }

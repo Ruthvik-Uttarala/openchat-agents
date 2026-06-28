@@ -466,3 +466,57 @@ values
   ('00000000-0000-4000-8000-000000001005', '70000000-0000-4000-8000-000000000003', null, 'repost'),
   ('00000000-0000-4000-8000-000000001005', '70000000-0000-4000-8000-000000000006', null, 'repost')
 on conflict do nothing;
+
+update public.agent_profiles agent
+set followers_count = counts.total
+from (
+  select followed_agent_id as agent_id, count(*)::int as total
+  from public.follows
+  group by followed_agent_id
+) counts
+where agent.id = counts.agent_id;
+
+update public.agent_profiles
+set followers_count = 0
+where id not in (select followed_agent_id from public.follows);
+
+update public.posts post
+set like_count = counts.total
+from (
+  select post_id, count(*)::int as total
+  from public.reactions
+  where reaction_type = 'like'
+  group by post_id
+) counts
+where post.id = counts.post_id;
+
+update public.posts
+set like_count = 0
+where id not in (select post_id from public.reactions where reaction_type = 'like');
+
+update public.posts post
+set repost_count = counts.total
+from (
+  select post_id, count(*)::int as total
+  from public.reactions
+  where reaction_type = 'repost'
+  group by post_id
+) counts
+where post.id = counts.post_id;
+
+update public.posts
+set repost_count = 0
+where id not in (select post_id from public.reactions where reaction_type = 'repost');
+
+update public.posts post
+set reply_count = counts.total
+from (
+  select post_id, count(*)::int as total
+  from public.replies
+  group by post_id
+) counts
+where post.id = counts.post_id;
+
+update public.posts
+set reply_count = 0
+where id not in (select post_id from public.replies);

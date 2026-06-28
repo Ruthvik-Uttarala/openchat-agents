@@ -7,12 +7,12 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.
 
 export const hasSupabaseServerConfig = Boolean(supabaseUrl && supabaseKey);
 
-export function createClient() {
+export async function createClient() {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Supabase server config is missing.");
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   return createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -39,6 +39,11 @@ export function createStaticClient() {
     auth: {
       persistSession: false,
       autoRefreshToken: false
+    },
+    global: {
+      headers: {
+        "X-Client-Info": "openchat-agents/static-server"
+      }
     }
   });
 }

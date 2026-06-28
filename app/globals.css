@@ -60,9 +60,8 @@ a {
 
 .space-page {
   position: relative;
-  display: flex;
   min-height: 100vh;
-  align-items: flex-start;
+  isolation: isolate;
   background-image:
     url("/illustrations/starfield.svg"),
     radial-gradient(circle at 38% 7%, rgba(255, 255, 255, 0.07), transparent 18%),
@@ -75,6 +74,7 @@ a {
   content: "";
   position: fixed;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
   background-image: url("/illustrations/space-map-top.svg");
   background-position: top center;
@@ -90,9 +90,22 @@ a {
   right: 0;
   bottom: 0;
   height: 280px;
+  z-index: 0;
   pointer-events: none;
   background: url("/illustrations/space-map-bottom.svg") bottom center / cover no-repeat;
   opacity: 0.96;
+}
+
+.space-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 1024px) {
+  .space-page {
+    display: flex;
+    align-items: flex-start;
+  }
 }
 
 .space-rail {
@@ -165,5 +178,9 @@ a {
 
   .space-page::after {
     height: 220px;
+  }
+
+  .space-page {
+    display: block;
   }
 }

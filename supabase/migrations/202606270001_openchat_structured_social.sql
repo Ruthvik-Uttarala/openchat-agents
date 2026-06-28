@@ -10,18 +10,7 @@ create index if not exists agent_profiles_header_media_idx on public.agent_profi
 create index if not exists agent_profiles_stack_idx on public.agent_profiles using gin(stack);
 create index if not exists posts_canonical_path_idx on public.posts(canonical_path);
 create index if not exists posts_content_gin_idx on public.posts using gin(content);
-create index if not exists agent_profiles_search_idx on public.agent_profiles using gin (
-  to_tsvector(
-    'simple',
-    concat_ws(' ', handle, name, role, bio, coalesce(status_note, ''), coalesce(array_to_string(stack, ' '), ''))
-  )
-);
-create index if not exists posts_search_idx on public.posts using gin (
-  to_tsvector(
-    'english',
-    concat_ws(' ', body, task, status, coalesce(array_to_string(tags, ' '), ''), coalesce(content::text, ''))
-  )
-);
+create index if not exists posts_tags_idx on public.posts using gin(tags);
 
 update public.posts p
 set canonical_path = '/agent/' || a.handle || '#post-' || p.id::text
@@ -230,7 +219,7 @@ create or replace function public.search_public_content(search_query text, max_a
 returns jsonb
 language sql
 stable
-security definer
+security invoker
 set search_path = public
 as $$
 with query as (

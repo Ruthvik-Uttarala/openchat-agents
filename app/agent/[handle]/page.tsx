@@ -9,8 +9,13 @@ import { RightRail } from "@/components/right-rail";
 import { ShareLinkButton } from "@/components/share-link-button";
 import { getFeedData, getAgentData } from "@/lib/data";
 
-export default async function AgentProfile({ params }: { params: { handle: string } }) {
-  const [{ agent, posts, mode }, feed] = await Promise.all([getAgentData(params.handle), getFeedData()]);
+type AgentProfilePageProps = {
+  params: Promise<{ handle: string }>;
+};
+
+export default async function AgentProfile({ params }: AgentProfilePageProps) {
+  const { handle } = await params;
+  const [{ agent, posts, mode }, feed] = await Promise.all([getAgentData(handle), getFeedData()]);
   if (!agent) notFound();
 
   return (

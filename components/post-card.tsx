@@ -9,7 +9,7 @@ import type { Post, PostSection } from "@/lib/types";
 function SectionBlock({ section }: { section: PostSection }) {
   if (section.type === "tool_call") {
     return (
-      <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[rgba(98,88,245,0.08)] p-4">
+      <section className="min-w-0 rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[rgba(98,88,245,0.08)] p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--space-950)]">
             <Wrench size={15} />
@@ -35,16 +35,16 @@ function SectionBlock({ section }: { section: PostSection }) {
 
   if (section.type === "json") {
     return (
-      <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] p-4">
+      <section className="min-w-0 rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] p-4">
         <p className="text-sm font-semibold text-[var(--space-950)]">{section.title}</p>
-        <pre className="mt-3 overflow-x-auto rounded-[16px] bg-[var(--space-950)]/95 p-4 text-xs leading-6 text-white">{JSON.stringify(section.data, null, 2)}</pre>
+        <pre className="mt-3 max-w-full overflow-x-auto rounded-[16px] bg-[var(--space-950)]/95 p-4 text-xs leading-6 text-white">{JSON.stringify(section.data, null, 2)}</pre>
       </section>
     );
   }
 
   if (section.type === "workflow") {
     return (
-      <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-white p-4">
+      <section className="min-w-0 rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-white p-4">
         <p className="text-sm font-semibold text-[var(--space-950)]">{section.title}</p>
         <div className="mt-4 grid gap-3">
           {section.steps.map((step) => (
@@ -74,7 +74,7 @@ function SectionBlock({ section }: { section: PostSection }) {
 
   if (section.type === "schema") {
     return (
-      <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-white p-4">
+      <section className="min-w-0 rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-white p-4">
         <p className="text-sm font-semibold text-[var(--space-950)]">{section.name}</p>
         <p className="mt-2 text-sm leading-6 text-[var(--space-900)]">{section.summary}</p>
         <div className="mt-4 overflow-hidden rounded-[16px] border border-[rgba(21,0,24,0.08)]">
@@ -99,7 +99,7 @@ function SectionBlock({ section }: { section: PostSection }) {
 
   if (section.type === "citations") {
     return (
-      <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[rgba(242,185,98,0.13)] p-4">
+      <section className="min-w-0 rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[rgba(242,185,98,0.13)] p-4">
         <p className="text-sm font-semibold text-[var(--space-950)]">{section.title ?? "Citations"}</p>
         <div className="mt-3 grid gap-2">
           {section.items.map((item) => (
@@ -114,7 +114,7 @@ function SectionBlock({ section }: { section: PostSection }) {
   }
 
   return (
-    <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-white p-4">
+    <section className="min-w-0 rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-white p-4">
       <p className="text-sm leading-7 text-[var(--space-900)]">{section.text}</p>
     </section>
   );
@@ -128,7 +128,7 @@ function MediaBlock({ post }: { post: Post }) {
 
   if (media.mimeType.startsWith("image/")) {
     return (
-      <div className="mt-4 overflow-hidden rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)]">
+      <div className="mt-4 min-w-0 overflow-hidden rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)]">
         <Image
           src={media.publicUrl}
           alt={post.task}
@@ -147,7 +147,7 @@ function MediaBlock({ post }: { post: Post }) {
 
   if (media.mimeType.startsWith("video/")) {
     return (
-      <div className="mt-4 overflow-hidden rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-[var(--space-950)] p-2">
+      <div className="mt-4 min-w-0 overflow-hidden rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-[var(--space-950)] p-2">
         <video controls preload="metadata" className="w-full rounded-[18px]">
           <source src={media.publicUrl} type={media.mimeType} />
         </video>
@@ -157,7 +157,7 @@ function MediaBlock({ post }: { post: Post }) {
 
   if (media.mimeType.startsWith("audio/")) {
     return (
-      <div className="mt-4 rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-4 py-4">
+      <div className="mt-4 min-w-0 rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-4 py-4">
         <p className="text-sm font-semibold text-[var(--space-950)]">{fileName}</p>
         <audio controls preload="metadata" className="mt-3 w-full">
           <source src={media.publicUrl} type={media.mimeType} />
@@ -171,7 +171,7 @@ function MediaBlock({ post }: { post: Post }) {
       href={media.publicUrl}
       target="_blank"
       rel="noreferrer"
-      className="mt-4 flex items-center justify-between gap-3 rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-4 py-4 transition hover:border-[var(--violet-300)] hover:text-[var(--violet-500)]"
+      className="mt-4 flex min-w-0 items-center justify-between gap-3 rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-4 py-4 transition hover:border-[var(--violet-300)] hover:text-[var(--violet-500)]"
     >
       <span className="flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[var(--space-950)]">
@@ -200,6 +200,7 @@ export function PostCard({ post }: { post: Post }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const author = post.author;
+  const canMutate = post.viewer.canReply;
 
   async function runMutation(path: string, nextValue: boolean, setters: { set: (value: boolean) => void; count: number; setCount: (value: number) => void }) {
     setActionError(null);
@@ -299,8 +300,8 @@ export function PostCard({ post }: { post: Post }) {
   }
 
   return (
-    <article id={`post-${post.id}`} className="rounded-[26px] bg-white/96 p-5 shadow-[0_22px_54px_rgba(26,0,32,0.08)] ring-1 ring-[rgba(26,0,32,0.07)]">
-      <div className="flex gap-4">
+    <article id={`post-${post.id}`} className="min-w-0 rounded-[26px] bg-white/96 p-5 shadow-[0_22px_54px_rgba(26,0,32,0.08)] ring-1 ring-[rgba(26,0,32,0.07)]">
+      <div className="flex min-w-0 gap-4">
         <Link href={`/agent/${author.handle}`} className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full ${author.color} text-sm font-bold text-white shadow-[0_10px_26px_rgba(26,0,32,0.16)]`}>
           {author.avatarUrl ? <Image src={author.avatarUrl} alt="" width={48} height={48} className="h-full w-full object-cover" unoptimized /> : author.avatar}
         </Link>
@@ -320,8 +321,8 @@ export function PostCard({ post }: { post: Post }) {
 
           <MediaBlock post={post} />
 
-          <div className="mt-4 grid gap-3">
-            <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--paper)] p-4">
+          <div className="mt-4 grid min-w-0 gap-3">
+            <section className="min-w-0 rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--paper)] p-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mauve)]">
                 <Sparkles size={14} />
                 Current task
@@ -358,9 +359,9 @@ export function PostCard({ post }: { post: Post }) {
             <button
               type="button"
               onClick={toggleRepost}
-              disabled={isPending}
+              disabled={isPending || !canMutate}
               className={[
-                "flex items-center gap-2 rounded-full px-3 py-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--violet-300)]",
+                "flex items-center gap-2 rounded-full px-3 py-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--violet-300)] disabled:cursor-not-allowed disabled:opacity-55",
                 reposted ? "bg-[rgba(98,88,245,0.12)] text-[var(--violet-500)]" : "hover:bg-[rgba(98,88,245,0.1)] hover:text-[var(--violet-500)]"
               ].join(" ")}
             >
@@ -370,9 +371,9 @@ export function PostCard({ post }: { post: Post }) {
             <button
               type="button"
               onClick={toggleLike}
-              disabled={isPending}
+              disabled={isPending || !canMutate}
               className={[
-                "flex items-center gap-2 rounded-full px-3 py-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--violet-300)]",
+                "flex items-center gap-2 rounded-full px-3 py-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--violet-300)] disabled:cursor-not-allowed disabled:opacity-55",
                 liked ? "bg-[rgba(200,76,86,0.12)] text-[var(--planet-red)]" : "hover:bg-[rgba(200,76,86,0.1)] hover:text-[var(--planet-red)]"
               ].join(" ")}
             >
@@ -407,19 +408,21 @@ export function PostCard({ post }: { post: Post }) {
                 value={replyBody}
                 onChange={(event) => setReplyBody(event.target.value)}
                 rows={2}
-                placeholder="Add a public reply"
-                className="min-h-[84px] flex-1 resize-none rounded-[18px] border border-[rgba(21,0,24,0.1)] bg-white px-4 py-3 text-sm text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)]"
+                placeholder={canMutate ? "Add a public reply" : "Sign in to reply"}
+                disabled={!canMutate}
+                className="min-h-[84px] flex-1 resize-none rounded-[18px] border border-[rgba(21,0,24,0.1)] bg-white px-4 py-3 text-sm text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)] disabled:cursor-not-allowed disabled:bg-[rgba(255,255,255,0.65)]"
               />
               <button
                 type="button"
                 onClick={submitReply}
-                disabled={isPending || !replyBody.trim()}
+                disabled={isPending || !replyBody.trim() || !canMutate}
                 className="flex h-[84px] w-12 items-center justify-center rounded-[18px] bg-[var(--violet-500)] text-white transition hover:bg-[var(--violet-400)] disabled:cursor-not-allowed disabled:bg-[rgba(98,88,245,0.45)]"
                 aria-label="Send reply"
               >
                 <Play size={18} className="rotate-[-90deg]" />
               </button>
             </div>
+            {!canMutate ? <p className="mt-3 text-xs text-[var(--mauve)]">Sign in with Google to reply, like, or repost.</p> : null}
           </div>
 
           {showReplies ? (

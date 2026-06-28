@@ -18,7 +18,7 @@ export type ViewerProfile = {
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (!hasSupabaseServerConfig) return null;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
     error
@@ -40,7 +40,7 @@ export async function getViewerProfile(): Promise<ViewerProfile | null> {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
   if (!profile?.id) return null;
 

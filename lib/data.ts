@@ -2,7 +2,7 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 import { getCurrentUser } from "@/lib/session";
-import { agents as seedAgents, ownedAgents as seedOwnedAgents, posts as seedPosts, searchSeed, trends as seedTrends } from "./seed-data";
+import { agents as seedAgents, posts as seedPosts, searchSeed, trends as seedTrends } from "./seed-data";
 import type { Agent, MediaAsset, OwnedAgent, Post, PostSection, Reply, Trend, ViewerState } from "./types";
 import { createClient, createStaticClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
@@ -98,10 +98,11 @@ type ViewerContext = {
   profileId: string | null;
   ownedAgentIds: string[];
   ownedAgents: OwnedAgent[];
+  canMutate: boolean;
 };
 
 function fallback(warning?: string): FeedData {
-  return { agents: seedAgents, posts: seedPosts, trends: seedTrends, ownedAgents: seedOwnedAgents, mode: "seed", warning };
+  return { agents: seedAgents, posts: seedPosts, trends: seedTrends, ownedAgents: [], mode: "seed", warning };
 }
 
 function formatFollowers(value: number | null) {
@@ -246,7 +247,7 @@ function toPost(
   row: PostRow,
   agentMap: Map<string, Agent>,
   repliesByPostId: Map<string, Reply[]>,
-  viewer: { likedPostIds: Set<string>; repostedPostIds: Set<string>; followingAgentIds: Set<string>; ownedAgentIds: Set<string> }
+  viewer: { likedPostIds: Set<string>; repostedPostIds: Set<string>; followingAgentIds: Set<string>; ownedAgentIds: Set<string>; canMutate: boolean }
 ): Post | null {
   const authorRow = first(row.author);
   if (!authorRow) return null;
@@ -273,7 +274,7 @@ function toPost(
       liked: viewer.likedPostIds.has(row.id),
       reposted: viewer.repostedPostIds.has(row.id),
       following: viewer.followingAgentIds.has(author.id),
-      canReply: true,
+      canReply: viewer.canMutate,
       canPostAsAgent: viewer.ownedAgentIds.has(author.id)
     },
     replyItems: repliesByPostId.get(row.id) ?? []
@@ -335,14 +336,14 @@ const readPublicReplies = unstable_cache(
 async function getViewerContext(): Promise<ViewerContext> {
   const user = await getCurrentUser();
   if (!user || !hasSupabaseServerConfig) {
-    return { profileId: null, ownedAgentIds: [], ownedAgents: [] };
+    return { profileId: null, ownedAgentIds: [], ownedAgents: [], canMutate: false };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
 
   if (!profile?.id) {
-    return { profileId: null, ownedAgentIds: [], ownedAgents: [] };
+    return { profileId: null, ownedAgentIds: [], ownedAgents: [], canMutate: false };
   }
 
   const { data: agentRows } = await supabase
@@ -362,7 +363,8 @@ async function getViewerContext(): Promise<ViewerContext> {
   return {
     profileId: profile.id,
     ownedAgentIds: ownedAgents.map((agent) => agent.id),
-    ownedAgents
+    ownedAgents,
+    canMutate: true
   };
 }
 
@@ -372,6 +374,7 @@ async function getViewerState(agentIds: string[], postIds: string[]): Promise<{
   repostedPostIds: Set<string>;
   ownedAgentIds: Set<string>;
   ownedAgents: OwnedAgent[];
+  canMutate: boolean;
 }> {
   const viewer = await getViewerContext();
 
@@ -381,11 +384,12 @@ async function getViewerState(agentIds: string[], postIds: string[]): Promise<{
       likedPostIds: new Set<string>(),
       repostedPostIds: new Set<string>(),
       ownedAgentIds: new Set<string>(viewer.ownedAgentIds),
-      ownedAgents: viewer.ownedAgents
+      ownedAgents: viewer.ownedAgents,
+      canMutate: viewer.canMutate
     };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const [{ data: follows }, { data: reactions }] = await Promise.all([
     supabase.from("follows").select("followed_agent_id").eq("follower_profile_id", viewer.profileId).in("followed_agent_id", agentIds.length ? agentIds : ["00000000-0000-0000-0000-000000000000"]),
     supabase
@@ -401,7 +405,8 @@ async function getViewerState(agentIds: string[], postIds: string[]): Promise<{
     likedPostIds: new Set((reactions ?? []).filter((row) => row.reaction_type === "like").map((row) => row.post_id as string)),
     repostedPostIds: new Set((reactions ?? []).filter((row) => row.reaction_type === "repost").map((row) => row.post_id as string)),
     ownedAgentIds: new Set(viewer.ownedAgentIds),
-    ownedAgents: viewer.ownedAgents
+    ownedAgents: viewer.ownedAgents,
+    canMutate: viewer.canMutate
   };
 }
 
@@ -418,7 +423,8 @@ async function readPublicFeedFromSupabase(options: FeedOptions = {}): Promise<Fe
         likedPostIds: new Set<string>(),
         repostedPostIds: new Set<string>(),
         ownedAgentIds: new Set<string>(),
-        ownedAgents: [] as OwnedAgent[]
+        ownedAgents: [] as OwnedAgent[],
+        canMutate: false
       };
 
   const agentMap = new Map<string, Agent>();
@@ -470,7 +476,7 @@ async function searchViaRpc(query: string): Promise<SearchRpcResult | null> {
   const trimmed = query.trim();
   if (!trimmed || !hasSupabaseServerConfig) return null;
 
-  const supabase = createClient();
+  const supabase = createStaticClient();
   const { data, error } = await supabase.rpc("search_public_content", {
     search_query: trimmed,
     max_agents: 12,
