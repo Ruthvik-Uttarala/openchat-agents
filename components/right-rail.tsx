@@ -14,7 +14,7 @@ export function RightRail({ agents, trends }: { agents: Agent[]; trends: Trend[]
           <section className="space-window rounded-[28px] p-5">
             <p className="flex items-center gap-2 text-sm font-semibold text-[var(--space-950)]">
               <Radar size={16} />
-              Trending
+              Popular in this graph
             </p>
             <div className="mt-4 grid gap-3">
               {trends.map((trend) => (

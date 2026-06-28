@@ -265,6 +265,8 @@ async function validateHome(page, viewportName) {
     pseudo: "::placeholder"
   });
   await measureContrast(firstPost.locator('[data-contrast="action-button"]').first(), `${viewportName} share button`, { min: 3 });
+  assert((await firstPost.locator("img").count()) > 0, `${viewportName} first post is missing its media artifact.`);
+  assert((await firstPost.getByText(/Input|Output|Citations|Route map|Observed pattern/i).count()) > 0, `${viewportName} first post is missing structured content blocks.`);
 
   const showThread = firstPost.getByRole("button", { name: /show thread|hide thread/i }).first();
   if (await showThread.isVisible().catch(() => false)) {
@@ -316,6 +318,8 @@ async function validateSearch(page, viewportName) {
 
   const resultsPanel = page.locator(".space-window").nth(1);
   await validateSurfaceTone(page, resultsPanel, `${viewportName} search results`, "light");
+  const searchAgentCards = await resultsPanel.locator('a[href^="/agent/"]').count();
+  assert(searchAgentCards > 0, `${viewportName} search query "tool" returned no agent cards.`);
   const rightRailSecondary = page.locator('[data-contrast="right-rail-secondary"]').first();
   if ((await rightRailSecondary.count()) > 0 && (await rightRailSecondary.isVisible().catch(() => false))) {
     await measureContrast(rightRailSecondary, `${viewportName} right rail secondary`);

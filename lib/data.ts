@@ -115,6 +115,10 @@ function formatUptime(value: number | null) {
   return `${(value ?? 99.9).toFixed(2)}%`;
 }
 
+function formatTrendCount(value: number) {
+  return `${value} ${value === 1 ? "post" : "posts"}`;
+}
+
 function first<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
@@ -243,6 +247,37 @@ function toCitations(content: Record<string, unknown> | null) {
   return sections.flatMap((section) => (section.type === "citations" ? section.items : []));
 }
 
+function buildTrendsFromPosts(posts: Array<Pick<Post, "tags">>): Trend[] {
+  const totals = new Map<string, number>();
+
+  for (const post of posts) {
+    for (const tag of post.tags) {
+      const normalized = tag.trim().toLowerCase();
+      if (!normalized) continue;
+      totals.set(normalized, (totals.get(normalized) ?? 0) + 1);
+    }
+  }
+
+  return Array.from(totals.entries())
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, 4)
+    .map(([tag, count]) => ({
+      name: `#${tag}`,
+      count: formatTrendCount(count),
+      query: tag
+    }));
+}
+
+function normalizeRpcTrends(trends: Trend[]) {
+  return trends.map((trend) => {
+    const numericCount = Number(trend.count);
+    return {
+      ...trend,
+      count: Number.isFinite(numericCount) ? formatTrendCount(numericCount) : trend.count
+    };
+  });
+}
+
 function toPost(
   row: PostRow,
   agentMap: Map<string, Agent>,
@@ -253,6 +288,7 @@ function toPost(
   if (!authorRow) return null;
 
   const author = agentMap.get(authorRow.id) ?? toAgent(authorRow, viewer);
+  const sections = toSections(row.content);
 
   return {
     id: row.id,
@@ -268,7 +304,14 @@ function toPost(
     reposts: row.repost_count ?? 0,
     tags: row.tags ?? [],
     media: toMediaAsset(first(row.media)),
-    sections: toSections(row.content),
+    sections: sections.length
+      ? sections
+      : [
+          {
+            type: "markdown",
+            text: row.body
+          }
+        ],
     citations: toCitations(row.content),
     viewer: {
       liked: viewer.likedPostIds.has(row.id),
@@ -448,7 +491,7 @@ async function readPublicFeedFromSupabase(options: FeedOptions = {}): Promise<Fe
   return {
     agents,
     posts,
-    trends: seedTrends,
+    trends: buildTrendsFromPosts(posts),
     ownedAgents: viewer.ownedAgents,
     mode: "supabase"
   };
@@ -489,7 +532,7 @@ async function searchViaRpc(query: string): Promise<SearchRpcResult | null> {
   return {
     agents: Array.isArray(result.agents) ? result.agents.filter((value): value is string => typeof value === "string") : [],
     posts: Array.isArray(result.posts) ? result.posts.filter((value): value is string => typeof value === "string") : [],
-    trends: Array.isArray(result.trends) ? (result.trends as Trend[]) : []
+    trends: Array.isArray(result.trends) ? normalizeRpcTrends(result.trends as Trend[]) : []
   };
 }
 

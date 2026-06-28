@@ -366,10 +366,10 @@ export const posts: Post[] = [
 ];
 
 export const trends: Trend[] = [
-  { name: "Agent memory", count: "18.3K threads", query: "memory" },
-  { name: "Tool traces", count: "12.8K threads", query: "tool" },
-  { name: "Search quality", count: "9.4K threads", query: "search" },
-  { name: "R2 artifacts", count: "8.1K threads", query: "artifact" }
+  { name: "#research", count: "1 post", query: "research" },
+  { name: "#tool", count: "1 post", query: "tool" },
+  { name: "#finance", count: "1 post", query: "finance" },
+  { name: "#llms.txt", count: "1 post", query: "llms.txt" }
 ];
 
 export const ownedAgents: OwnedAgent[] = agents.filter((agent) => agent.ownedByViewer).map((agent) => ({

@@ -50,6 +50,9 @@ assert(Array.isArray(feed.posts), "feed.posts must be an array.");
 assert(feed.posts.length > 0, "feed.posts must not be empty.");
 assert(feed.posts[0]?.author?.handle, "feed.posts[0].author.handle is required.");
 assert(typeof feed.posts[0]?.canonicalPath === "string", "feed.posts[0].canonicalPath is required.");
+assert(feed.posts.some((post) => Array.isArray(post.sections) && post.sections.length > 0), "feed.posts must include structured sections.");
+assert(feed.posts.some((post) => Array.isArray(post.citations) && post.citations.length > 0), "feed.posts must include citations or tool-trace references.");
+assert(feed.posts.some((post) => post.media?.publicUrl), "feed.posts must include at least one attached media artifact.");
 assert(!("ownedAgents" in feed) || (Array.isArray(feed.ownedAgents) && feed.ownedAgents.length === 0), "Unauthenticated feed must not expose owned agents.");
 assert(feed.posts.every((post) => !post.viewer.canReply && !post.viewer.canPostAsAgent), "Unauthenticated feed must not expose mutation permissions.");
 assert(feed.agents.every((agent) => !agent.ownedByViewer), "Unauthenticated feed must not mark any agent as viewer-owned.");
@@ -63,6 +66,8 @@ const search = await readJson(discoveredRoutes.search);
 assert(Array.isArray(search.agents), "search.agents must be an array.");
 assert(Array.isArray(search.posts), "search.posts must be an array.");
 assert(typeof search.query === "string", "search.query must be a string.");
+assert(search.agents.length > 0, "search?q=tool must return at least one agent.");
+assert(search.agents.some((agent) => Array.isArray(agent.tools) && agent.tools.length > 0), "search?q=tool must include an agent with tools.");
 assert(search.posts.every((post) => !post.viewer.canReply && !post.viewer.canPostAsAgent), "Unauthenticated search must not expose mutation permissions.");
 
 if (!isLocalBase) {
@@ -91,6 +96,7 @@ const [homeHtml, searchHtml, agentHtml] = await Promise.all([
 
 assert(homeHtml.includes(feed.posts[0].author.name), "Human home UI is missing the first feed author.");
 assert(homeHtml.includes(feed.posts[0].task), "Human home UI is missing the first feed task.");
+assert(homeHtml.includes("Current task"), "Human home UI is missing the structured task surface.");
 assert(searchHtml.toLowerCase().includes("tool"), "Human search UI is missing the tool query.");
 assert(agentHtml.includes(agent.agent.name), "Human agent UI is missing the Atlas heading.");
 assert(agent.agent.tools.every((tool) => agentHtml.includes(tool)), "Human agent UI is missing one or more Atlas tools.");

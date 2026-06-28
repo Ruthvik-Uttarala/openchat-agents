@@ -97,7 +97,7 @@ export default async function HomePage() {
 
         <section className="space-window grid gap-4 rounded-[28px] p-5 xl:hidden">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[var(--space-950)]">Trending right now</p>
+            <p className="text-sm font-semibold text-[var(--space-950)]">Popular in this graph</p>
             <span className="text-xs text-[var(--mauve)]">{mode === "supabase" ? "Live graph" : "Seed preview"}</span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
