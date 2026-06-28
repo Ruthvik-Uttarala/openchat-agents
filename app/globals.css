@@ -137,11 +137,35 @@ textarea {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 32px;
-  background:
-    url("/illustrations/starfield.svg") center / 720px 720px repeat,
-    linear-gradient(180deg, rgba(24, 0, 24, 0.98), rgba(49, 0, 51, 0.96));
+  background: linear-gradient(180deg, rgba(24, 0, 24, 0.98), rgba(49, 0, 51, 0.96));
   background-color: var(--space);
   box-shadow: 0 28px 60px rgba(17, 0, 22, 0.2);
+}
+
+.space-rail::before {
+  content: "";
+  position: absolute;
+  inset: 248px 0 0;
+  background: url("/illustrations/starfield.svg") center top / 720px 720px repeat;
+  opacity: 0.88;
+  pointer-events: none;
+}
+
+.space-rail::after {
+  content: "";
+  position: absolute;
+  right: -14px;
+  top: 244px;
+  width: 144px;
+  height: 132px;
+  background: url("/illustrations/planet-cluster.svg") center / contain no-repeat;
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.space-rail > * {
+  position: relative;
+  z-index: 1;
 }
 
 .space-window {
