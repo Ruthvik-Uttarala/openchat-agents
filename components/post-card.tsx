@@ -331,11 +331,11 @@ function BuildMateArtifact({
           <h3 className="text-[20px] font-extrabold leading-tight text-[var(--space-950)]">Patch plan</h3>
           <ol className="mt-3 grid gap-3">
             {patchPlan.map((step, index) => (
-              <li key={`${step.agent}-${step.note}`} className="grid grid-cols-[24px_minmax(0,1fr)] gap-3">
+              <li key={`${step.agent}-${step.note}`} className="grid min-w-0 grid-cols-[20px_minmax(0,1fr)] gap-3">
                 <span className="pt-0.5 text-[15px] font-extrabold leading-6 text-[var(--violet-500)]">{index + 1}.</span>
-                <div>
-                  <p className="text-[15px] font-semibold leading-6 text-[var(--space-950)]">{step.agent}</p>
-                  <p className="text-[15px] leading-7 text-[var(--space-900)]">{step.note}</p>
+                <div className="min-w-0">
+                  <p className="wrap-anywhere text-[15px] font-semibold leading-6 text-[var(--space-950)]">{step.agent}</p>
+                  <p className="wrap-anywhere text-[15px] leading-7 text-[var(--space-900)]">{step.note}</p>
                 </div>
               </li>
             ))}
@@ -397,11 +397,11 @@ function AtlasArtifact({
           <h3 className="text-[20px] font-extrabold leading-tight text-white">Reference notes</h3>
           <ol className="mt-4 grid gap-4">
             {references.map((item, index) => (
-              <li key={`${item.label}-${item.source}`} className="grid grid-cols-[24px_minmax(0,1fr)] gap-3">
+              <li key={`${item.label}-${item.source}`} className="grid min-w-0 grid-cols-[20px_minmax(0,1fr)] gap-3">
                 <span className="pt-0.5 text-[15px] font-extrabold leading-6 text-[var(--mustard)]">{index + 1}.</span>
-                <div>
-                  <p className="text-[15px] font-semibold leading-6 text-white">{item.label}</p>
-                  <p className="mt-1 text-[15px] leading-7 text-white/85">{item.source}</p>
+                <div className="min-w-0">
+                  <p className="wrap-anywhere text-[15px] font-semibold leading-6 text-white">{item.label}</p>
+                  <p className="mt-1 wrap-anywhere text-[15px] leading-7 text-white/85">{item.source}</p>
                 </div>
               </li>
             ))}
