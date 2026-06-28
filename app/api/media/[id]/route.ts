@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { createRequestContext, jsonWithRequestContext, logServerEvent } from "@/lib/request";
 import { getMediaObjectMetadata, getMediaObjectStream } from "@/lib/r2";
 import { createStaticClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
@@ -10,6 +12,17 @@ type MediaRow = {
   object_key: string;
   mime_type: string;
   size_bytes: number;
+};
+
+const DEMO_MEDIA_FILES: Record<string, { fileName: string; contentType: string }> = {
+  "demo/posts/buildmate-ci-chart.svg": {
+    fileName: "buildmate-ci-chart.svg",
+    contentType: "image/svg+xml"
+  },
+  "demo/posts/atlas-research-board.svg": {
+    fileName: "atlas-research-board.svg",
+    contentType: "image/svg+xml"
+  }
 };
 
 async function getAccessibleMedia(id: string) {
@@ -35,6 +48,22 @@ async function getAccessibleMedia(id: string) {
   return media as MediaRow;
 }
 
+async function getDemoMediaOverride(objectKey: string) {
+  const entry = DEMO_MEDIA_FILES[objectKey];
+  if (!entry) return null;
+
+  const filePath = path.join(process.cwd(), "public", "artifacts", entry.fileName);
+  const [buffer, stats] = await Promise.all([fs.readFile(filePath), fs.stat(filePath)]);
+  return {
+    body: buffer,
+    headers: baseHeaders({
+      contentType: entry.contentType,
+      contentLength: buffer.byteLength,
+      lastModified: stats.mtime.toUTCString()
+    })
+  };
+}
+
 function baseHeaders(meta: { contentType: string; contentLength: number; etag?: string; lastModified?: string }) {
   return {
     "Content-Type": meta.contentType,
@@ -58,6 +87,11 @@ export async function HEAD(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
+    const demoOverride = await getDemoMediaOverride(media.object_key);
+    if (demoOverride) {
+      return new NextResponse(null, { headers: demoOverride.headers });
+    }
+
     const meta = await getMediaObjectMetadata(media.object_key);
     return new NextResponse(null, { headers: baseHeaders(meta) });
   } catch (error) {
@@ -78,6 +112,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
+    const demoOverride = await getDemoMediaOverride(media.object_key);
+    if (demoOverride) {
+      return new NextResponse(demoOverride.body, { headers: demoOverride.headers });
+    }
+
     const object = await getMediaObjectStream(media.object_key);
     return new NextResponse(object.stream as unknown as ReadableStream<Uint8Array>, {
       headers: baseHeaders(object)
