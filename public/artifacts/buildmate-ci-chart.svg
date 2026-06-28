@@ -2,46 +2,32 @@
   <rect width="1440" height="900" rx="36" fill="#F8F5FA"/>
   <rect x="56" y="56" width="1328" height="136" rx="28" fill="#180018"/>
   <text x="104" y="118" fill="white" font-size="48" font-family="Manrope, Arial, sans-serif" font-weight="800">Checkout CI regression trace</text>
-  <text x="104" y="166" fill="#D5CFE3" font-size="22" font-family="Manrope, Arial, sans-serif">Patch candidate prepared after replaying the cart flow on four responsive breakpoints.</text>
-  <rect x="92" y="246" width="824" height="566" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
-  <path d="M154 696H854" stroke="#E7E0EB" stroke-width="4" stroke-linecap="round"/>
-  <path d="M154 322V696" stroke="#E7E0EB" stroke-width="4" stroke-linecap="round"/>
-  <path d="M190 640L314 512L438 562L562 404L686 446L810 338" stroke="#6258F5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="190" cy="640" r="18" fill="#6258F5"/>
-  <circle cx="314" cy="512" r="18" fill="#6258F5"/>
-  <circle cx="438" cy="562" r="18" fill="#6258F5"/>
-  <circle cx="562" cy="404" r="18" fill="#F2B962"/>
-  <circle cx="686" cy="446" r="18" fill="#6258F5"/>
-  <circle cx="810" cy="338" r="18" fill="#3D98C8"/>
-  <text x="144" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Mobile</text>
-  <text x="290" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Tablet</text>
-  <text x="414" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Desktop</text>
-  <text x="552" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Retry</text>
-  <text x="678" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Patched</text>
-  <text x="780" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Verified</text>
-  <rect id="buildmate-root-cause-panel" x="962" y="246" width="386" height="260" rx="28" fill="#180018"/>
-  <text id="buildmate-root-cause-title" x="998" y="306" fill="white" font-size="26" font-family="Manrope, Arial, sans-serif" font-weight="800">Root cause</text>
-  <text x="998" y="364" fill="#F2B962" font-size="18" font-family="Manrope, Arial, sans-serif" font-weight="700">•</text>
-  <text id="buildmate-root-cause-1" x="1030" y="362" fill="#E6DEEE" font-size="17" font-family="Manrope, Arial, sans-serif">
-    <tspan x="1030" dy="0">Optimistic cart state finished</tspan>
-    <tspan x="1030" dy="26">before the order id existed.</tspan>
-  </text>
-  <text x="998" y="434" fill="#F2B962" font-size="18" font-family="Manrope, Arial, sans-serif" font-weight="700">•</text>
-  <text id="buildmate-root-cause-2" x="1030" y="432" fill="#E6DEEE" font-size="17" font-family="Manrope, Arial, sans-serif">
-    <tspan x="1030" dy="0">The flaky branch only surfaced on</tspan>
-    <tspan x="1030" dy="26">small viewport navigation timing.</tspan>
-  </text>
-  <rect id="buildmate-patch-plan-panel" x="962" y="544" width="386" height="268" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
-  <text id="buildmate-patch-plan-title" x="998" y="604" fill="#180018" font-size="26" font-family="Manrope, Arial, sans-serif" font-weight="800">Patch plan</text>
-  <text id="buildmate-patch-plan-1" x="998" y="662" fill="#180018" font-size="17" font-family="Manrope, Arial, sans-serif">
-    <tspan x="998" dy="0">1. Block submit until order id exists.</tspan>
-  </text>
-  <text id="buildmate-patch-plan-2" x="998" y="706" fill="#180018" font-size="17" font-family="Manrope, Arial, sans-serif">
-    <tspan x="998" dy="0">2. Emit the id in the browser trace</tspan>
-    <tspan x="998" dy="24">summary.</tspan>
-  </text>
-  <text id="buildmate-patch-plan-3" x="998" y="754" fill="#180018" font-size="17" font-family="Manrope, Arial, sans-serif">
-    <tspan x="998" dy="0">3. Re-run 390px and 1440px flows</tspan>
-    <tspan x="998" dy="24">before merge.</tspan>
-  </text>
+  <text x="104" y="166" fill="#D5CFE3" font-size="22" font-family="Manrope, Arial, sans-serif">Regression shape across the responsive replay.</text>
+
+  <rect x="92" y="236" width="1256" height="576" rx="30" fill="white" stroke="#E7E0EB" stroke-width="2"/>
+  <path d="M168 696H1280" stroke="#E4DDE8" stroke-width="4" stroke-linecap="round"/>
+  <path d="M168 320V696" stroke="#E4DDE8" stroke-width="4" stroke-linecap="round"/>
+
+  <path d="M214 632L396 488L578 548L760 386L942 436L1124 334" stroke="#6258F5" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="214" cy="632" r="20" fill="#6258F5"/>
+  <circle cx="396" cy="488" r="20" fill="#6258F5"/>
+  <circle cx="578" cy="548" r="20" fill="#6258F5"/>
+  <circle cx="760" cy="386" r="20" fill="#F2B962"/>
+  <circle cx="942" cy="436" r="20" fill="#6258F5"/>
+  <circle cx="1124" cy="334" r="20" fill="#3D98C8"/>
+
+  <g fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">
+    <text x="188" y="748">Mobile</text>
+    <text x="366" y="748">Tablet</text>
+    <text x="540" y="748">Desktop</text>
+    <text x="734" y="748">Retry</text>
+    <text x="910" y="748">Patched</text>
+    <text x="1086" y="748">Verified</text>
+  </g>
+
+  <g>
+    <circle cx="1096" cy="122" r="24" fill="#F2B962"/>
+    <circle cx="1168" cy="132" r="34" fill="#3D98C8" fill-opacity="0.92"/>
+    <circle cx="1226" cy="106" r="16" fill="#C84C56" fill-opacity="0.9"/>
+  </g>
 </svg>

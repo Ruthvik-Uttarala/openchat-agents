@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { type ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { Check, Copy, Download, FileText, Heart, MessageCircle, Play, Repeat2, Send, Sparkles, Wrench, X } from "lucide-react";
 import type { Post, PostSection } from "@/lib/types";
 
@@ -227,6 +227,191 @@ function ImageLightbox({
   );
 }
 
+function humanizeKey(key: string) {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function readSectionText(value: unknown) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
+function buildRecommendation(labels: string[]) {
+  if (!labels.length) return "Keep the visible task, evidence, and next action aligned in one public surface.";
+  if (labels.length === 1) return `Keep ${labels[0].toLowerCase()} visible in the same public surface.`;
+  if (labels.length === 2) return `Keep ${labels[0].toLowerCase()} and ${labels[1].toLowerCase()} visible in the same public surface.`;
+  const head = labels.slice(0, -1).map((label) => label.toLowerCase()).join(", ");
+  return `Keep ${head}, and ${labels.at(-1)?.toLowerCase()} visible in the same public surface.`;
+}
+
+function ArtifactSurface({
+  title,
+  eyebrow,
+  imageAlt,
+  imageSrc,
+  imageWidth,
+  imageHeight,
+  onExpand,
+  children,
+  closeUpName
+}: {
+  title: string;
+  eyebrow: string;
+  imageAlt: string;
+  imageSrc: string;
+  imageWidth: number;
+  imageHeight: number;
+  onExpand: () => void;
+  closeUpName: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mt-4 overflow-hidden rounded-[24px] border border-[rgba(21,0,24,0.08)] bg-white shadow-[0_16px_36px_rgba(26,0,32,0.06)]" data-artifact={closeUpName}>
+      <div className="border-b border-[rgba(21,0,24,0.08)] bg-[var(--mist)] p-3 sm:p-4">
+        <button type="button" onClick={onExpand} className="block w-full text-left" aria-label={`Expand ${title} artifact`}>
+          <div className="overflow-hidden rounded-[20px] border border-[rgba(21,0,24,0.08)] bg-white" data-artifact-panel={`${closeUpName}-visual`}>
+            <div className="flex items-center gap-2 border-b border-[rgba(21,0,24,0.08)] bg-[var(--paper)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mauve)]">
+              <Sparkles size={13} />
+              {eyebrow}
+            </div>
+            <div className="bg-[var(--mist)] p-3 sm:p-4">
+              <Image
+                src={imageSrc}
+                alt={imageAlt}
+                width={imageWidth}
+                height={imageHeight}
+                className="h-auto w-full rounded-[18px] object-contain"
+                sizes="(max-width: 1024px) 100vw, 760px"
+                unoptimized
+              />
+            </div>
+          </div>
+        </button>
+      </div>
+      <div className="grid gap-4 p-4 sm:p-5">{children}</div>
+    </section>
+  );
+}
+
+function BuildMateArtifact({
+  post,
+  media,
+  onExpand
+}: {
+  post: Post;
+  media: NonNullable<Post["media"]>;
+  onExpand: () => void;
+}) {
+  const toolCall = post.sections.find((section): section is Extract<PostSection, { type: "tool_call" }> => section.type === "tool_call");
+  const workflow = post.sections.find((section): section is Extract<PostSection, { type: "workflow" }> => section.type === "workflow");
+  const rootCause = toolCall?.outputSummary ?? post.body;
+  const patchPlan = workflow?.steps ?? [];
+
+  return (
+    <ArtifactSurface
+      title={post.task}
+      eyebrow="BuildMate artifact"
+      imageAlt={`${post.task} chart`}
+      imageSrc={media.publicUrl ?? ""}
+      imageWidth={media.width ?? 1440}
+      imageHeight={media.height ?? 900}
+      onExpand={onExpand}
+      closeUpName="buildmate-artifact"
+    >
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+        <section className="rounded-[22px] bg-[var(--space-950)] px-5 py-5 text-white" data-artifact-panel="buildmate-root-cause">
+          <h3 className="text-[20px] font-extrabold leading-tight text-white">Root cause</h3>
+          <p className="mt-3 text-[15px] leading-7 text-white/90">{rootCause}</p>
+        </section>
+        <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-5 py-5" data-artifact-panel="buildmate-patch-plan">
+          <h3 className="text-[20px] font-extrabold leading-tight text-[var(--space-950)]">Patch plan</h3>
+          <ol className="mt-3 grid gap-3">
+            {patchPlan.map((step, index) => (
+              <li key={`${step.agent}-${step.note}`} className="grid grid-cols-[24px_minmax(0,1fr)] gap-3">
+                <span className="pt-0.5 text-[15px] font-extrabold leading-6 text-[var(--violet-500)]">{index + 1}.</span>
+                <div>
+                  <p className="text-[15px] font-semibold leading-6 text-[var(--space-950)]">{step.agent}</p>
+                  <p className="text-[15px] leading-7 text-[var(--space-900)]">{step.note}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
+    </ArtifactSurface>
+  );
+}
+
+function AtlasArtifact({
+  post,
+  media,
+  onExpand
+}: {
+  post: Post;
+  media: NonNullable<Post["media"]>;
+  onExpand: () => void;
+}) {
+  const patternSection = post.sections.find((section): section is Extract<PostSection, { type: "json" }> => section.type === "json");
+  const referenceSection = post.sections.find((section): section is Extract<PostSection, { type: "citations" }> => section.type === "citations");
+  const evidenceFields = Object.entries(patternSection?.data ?? {}).map(([key, value]) => ({
+    label: humanizeKey(key),
+    description: readSectionText(value)
+  }));
+  const references = referenceSection?.items.length ? referenceSection.items : post.citations;
+  const recommendation = buildRecommendation(evidenceFields.map((field) => field.label));
+
+  return (
+    <ArtifactSurface
+      title={post.task}
+      eyebrow="Atlas artifact"
+      imageAlt={`${post.task} route map`}
+      imageSrc={media.publicUrl ?? ""}
+      imageWidth={media.width ?? 1600}
+      imageHeight={media.height ?? 1040}
+      onExpand={onExpand}
+      closeUpName="atlas-artifact"
+    >
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)]">
+        <div className="grid gap-4">
+          <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-5 py-5" data-artifact-panel="atlas-evidence-fields">
+            <h3 className="text-[20px] font-extrabold leading-tight text-[var(--space-950)]">Repeated evidence fields</h3>
+            <div className="mt-4 grid gap-3">
+              {evidenceFields.map((field) => (
+                <div key={field.label} className="rounded-[18px] bg-white px-4 py-4">
+                  <p className="text-[15px] font-semibold leading-6 text-[var(--space-950)]">{field.label}</p>
+                  <p className="mt-1 text-[15px] leading-7 text-[var(--space-900)]">{field.description}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-white px-5 py-5" data-artifact-panel="atlas-top-recommendation">
+            <h3 className="text-[20px] font-extrabold leading-tight text-[var(--space-950)]">Top recommendation</h3>
+            <p className="mt-3 text-[15px] leading-7 text-[var(--space-900)]">{recommendation}</p>
+          </section>
+        </div>
+        <section className="rounded-[22px] bg-[var(--space-950)] px-5 py-5 text-white" data-artifact-panel="atlas-reference-notes">
+          <h3 className="text-[20px] font-extrabold leading-tight text-white">Reference notes</h3>
+          <ol className="mt-4 grid gap-4">
+            {references.map((item, index) => (
+              <li key={`${item.label}-${item.source}`} className="grid grid-cols-[24px_minmax(0,1fr)] gap-3">
+                <span className="pt-0.5 text-[15px] font-extrabold leading-6 text-[var(--mustard)]">{index + 1}.</span>
+                <div>
+                  <p className="text-[15px] font-semibold leading-6 text-white">{item.label}</p>
+                  <p className="mt-1 text-[15px] leading-7 text-white/85">{item.source}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
+    </ArtifactSurface>
+  );
+}
+
 function MediaBlock({ post }: { post: Post }) {
   const media = post.media;
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -237,6 +422,40 @@ function MediaBlock({ post }: { post: Post }) {
 
   const fileName = media.objectKey.split("/").pop() ?? media.objectKey;
   const aspectRatio = media.width && media.height ? `${media.width} / ${media.height}` : "16 / 10";
+  const isBuildMateArtifact = media.objectKey.endsWith("buildmate-ci-chart.svg");
+  const isAtlasArtifact = media.objectKey.endsWith("atlas-research-board.svg");
+
+  if (isBuildMateArtifact) {
+    return (
+      <>
+        <BuildMateArtifact post={post} media={media} onExpand={() => setLightboxOpen(true)} />
+        <ImageLightbox
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          src={media.publicUrl}
+          alt={post.task}
+          width={media.width ?? 1440}
+          height={media.height ?? 900}
+        />
+      </>
+    );
+  }
+
+  if (isAtlasArtifact) {
+    return (
+      <>
+        <AtlasArtifact post={post} media={media} onExpand={() => setLightboxOpen(true)} />
+        <ImageLightbox
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          src={media.publicUrl}
+          alt={post.task}
+          width={media.width ?? 1600}
+          height={media.height ?? 1040}
+        />
+      </>
+    );
+  }
 
   if (media.mimeType.startsWith("image/")) {
     if (imageError) {

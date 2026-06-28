@@ -2,44 +2,29 @@
   <rect width="1600" height="1040" rx="40" fill="#F8F5FA"/>
   <rect x="60" y="60" width="1480" height="160" rx="30" fill="#180018"/>
   <text x="112" y="130" fill="white" font-size="54" font-family="Manrope, Arial, sans-serif" font-weight="800">Agent surface audit</text>
-  <text x="112" y="184" fill="#D5CFE3" font-size="24" font-family="Manrope, Arial, sans-serif">Public proof fields that reduce ambiguity for both operators and other agents.</text>
-  <rect x="92" y="286" width="432" height="286" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
-  <text x="128" y="346" fill="#180018" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Repeated evidence fields</text>
-  <rect x="128" y="386" width="360" height="44" rx="16" fill="#F4F1F7"/>
-  <text x="150" y="414" fill="#180018" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">Current task</text>
-  <rect x="128" y="446" width="360" height="44" rx="16" fill="#F4F1F7"/>
-  <text x="150" y="474" fill="#180018" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">Tool evidence</text>
-  <rect x="128" y="506" width="360" height="44" rx="16" fill="#F4F1F7"/>
-  <text x="150" y="534" fill="#180018" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">Confidence</text>
-  <rect x="560" y="286" width="468" height="286" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
-  <text x="596" y="346" fill="#180018" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Route map</text>
-  <path d="M610 412H980" stroke="#6258F5" stroke-width="16" stroke-linecap="round"/>
-  <circle cx="644" cy="412" r="24" fill="#6258F5"/>
-  <circle cx="814" cy="412" r="24" fill="#6258F5"/>
-  <circle cx="950" cy="412" r="24" fill="#6258F5"/>
-  <text x="604" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Home feed</text>
-  <text x="770" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Search JSON</text>
-  <text x="900" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Agent API</text>
-  <rect id="atlas-reference-panel" x="1064" y="286" width="444" height="630" rx="28" fill="#180018"/>
-  <text id="atlas-reference-title" x="1100" y="346" fill="white" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Reference notes</text>
-  <text x="1100" y="410" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">1</text>
-  <text id="atlas-reference-note-1" x="1140" y="408" fill="#E6DEEE" font-size="19" font-family="Manrope, Arial, sans-serif">
-    <tspan x="1140" dy="0">Stable canonical URLs matter</tspan>
-    <tspan x="1140" dy="28">more than decorative copy.</tspan>
-  </text>
-  <text x="1100" y="490" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">2</text>
-  <text id="atlas-reference-note-2" x="1140" y="488" fill="#E6DEEE" font-size="19" font-family="Manrope, Arial, sans-serif">
-    <tspan x="1140" dy="0">Tool traces should sit next to</tspan>
-    <tspan x="1140" dy="28">the work update, not behind</tspan>
-    <tspan x="1140" dy="28">a separate drawer.</tspan>
-  </text>
-  <text x="1100" y="604" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">3</text>
-  <text id="atlas-reference-note-3" x="1140" y="602" fill="#E6DEEE" font-size="19" font-family="Manrope, Arial, sans-serif">
-    <tspan x="1140" dy="0">Machine routes must match</tspan>
-    <tspan x="1140" dy="28">the visible feed structure.</tspan>
-  </text>
-  <rect x="92" y="620" width="936" height="296" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
-  <text x="128" y="682" fill="#180018" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Top recommendation</text>
-  <text x="128" y="742" fill="#180018" font-size="22" font-family="Manrope, Arial, sans-serif">Blend current task, proof, and next action into one card.</text>
-  <text x="128" y="790" fill="#90777F" font-size="20" font-family="Manrope, Arial, sans-serif">That makes the feed useful for humans scanning quickly and for agents reading programmatically.</text>
+  <text x="112" y="184" fill="#D5CFE3" font-size="24" font-family="Manrope, Arial, sans-serif">Public route map for the feed, search, and agent API.</text>
+
+  <rect x="108" y="286" width="1384" height="628" rx="34" fill="white" stroke="#E7E0EB" stroke-width="2"/>
+  <path d="M268 600C412 470 560 384 744 384C918 384 1054 454 1234 580" stroke="#6258F5" stroke-width="18" stroke-linecap="round"/>
+  <path d="M744 384C808 462 882 510 988 552" stroke="#3D98C8" stroke-width="14" stroke-linecap="round"/>
+
+  <circle cx="268" cy="600" r="34" fill="#6258F5"/>
+  <circle cx="744" cy="384" r="42" fill="#6258F5"/>
+  <circle cx="988" cy="552" r="28" fill="#3D98C8"/>
+  <circle cx="1234" cy="580" r="34" fill="#C84C56"/>
+  <circle cx="604" cy="702" r="18" fill="#F2B962"/>
+  <circle cx="888" cy="720" r="14" fill="#9B8183"/>
+
+  <g fill="#180018" font-family="Manrope, Arial, sans-serif">
+    <text x="208" y="676" font-size="26" font-weight="800">Home feed</text>
+    <text x="684" y="306" font-size="28" font-weight="800">Search JSON</text>
+    <text x="944" y="632" font-size="24" font-weight="800">Agent API</text>
+    <text x="1170" y="656" font-size="26" font-weight="800">Canonical links</text>
+  </g>
+
+  <g opacity="0.85">
+    <circle cx="1240" cy="162" r="22" fill="#F2B962"/>
+    <circle cx="1312" cy="132" r="36" fill="#C84C56"/>
+    <circle cx="1372" cy="168" r="18" fill="#3D98C8"/>
+  </g>
 </svg>

@@ -8,11 +8,20 @@ const artifactDir = path.join(process.cwd(), "tmp", "final-delta");
 fs.mkdirSync(artifactDir, { recursive: true });
 
 const viewports = [
+  { name: "tiny-mobile", width: 320, height: 740 },
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 1024 },
   { name: "small-desktop", width: 1024, height: 768 },
   { name: "desktop", width: 1440, height: 900 },
   { name: "wide-desktop", width: 1920, height: 1080 }
+];
+
+const forbiddenSvgText = [
+  "root cause",
+  "patch plan",
+  "reference notes",
+  "top recommendation",
+  "repeated evidence fields"
 ];
 
 function assert(condition, message) {
@@ -21,213 +30,147 @@ function assert(condition, message) {
 
 async function screenshotLocator(locator, fileName) {
   const filePath = path.join(artifactDir, fileName);
-  await locator.screenshot({ path: filePath, animations: "disabled" });
+  await locator.screenshot({ path: filePath, animations: "disabled", timeout: 120000 });
   return filePath;
 }
 
-async function screenshotPage(page, fileName) {
-  const filePath = path.join(artifactDir, fileName);
-  await page.screenshot({ path: filePath, fullPage: true, animations: "disabled" });
-  return filePath;
-}
-
-async function screenshotSvg(page, fileName) {
-  const filePath = path.join(artifactDir, fileName);
-  await page.locator("svg").first().screenshot({ path: filePath, animations: "disabled", timeout: 120000 });
-  return filePath;
-}
-
-async function measureElementContrast(locator, label, { pseudo = null } = {}) {
-  const result = await locator.first().evaluate(
-    (element, options) => {
-      function parseColor(input) {
-        if (!input) return null;
-        const rgbaMatch = input.match(/rgba?\(([^)]+)\)/i);
-        if (rgbaMatch) {
-          const parts = rgbaMatch[1].split(",").map((part) => part.trim());
-          if (parts.length < 3) return null;
-          return [
-            Number(parts[0]),
-            Number(parts[1]),
-            Number(parts[2]),
-            parts[3] == null ? 1 : Number(parts[3])
-          ];
-        }
-
-        const hexMatch = input.match(/^#([0-9a-f]{3,8})$/i);
-        if (!hexMatch) return null;
-        const raw = hexMatch[1];
-        if (raw.length === 3) {
-          return raw.split("").map((char) => Number.parseInt(char + char, 16)).concat(1);
-        }
-        if (raw.length === 6) {
-          return [0, 2, 4].map((index) => Number.parseInt(raw.slice(index, index + 2), 16)).concat(1);
-        }
-        if (raw.length === 8) {
-          return [
-            Number.parseInt(raw.slice(0, 2), 16),
-            Number.parseInt(raw.slice(2, 4), 16),
-            Number.parseInt(raw.slice(4, 6), 16),
-            Number.parseInt(raw.slice(6, 8), 16) / 255
-          ];
-        }
-        return null;
-      }
-
-      function composite(top, bottom) {
-        const alpha = top[3] + bottom[3] * (1 - top[3]);
-        if (alpha <= 0) return [255, 255, 255, 0];
+async function measureElementContrast(locator, label) {
+  const result = await locator.first().evaluate((element) => {
+    function parseColor(input) {
+      if (!input) return null;
+      const rgbaMatch = input.match(/rgba?\(([^)]+)\)/i);
+      if (rgbaMatch) {
+        const parts = rgbaMatch[1].split(",").map((part) => part.trim());
+        if (parts.length < 3) return null;
         return [
-          (top[0] * top[3] + bottom[0] * bottom[3] * (1 - top[3])) / alpha,
-          (top[1] * top[3] + bottom[1] * bottom[3] * (1 - top[3])) / alpha,
-          (top[2] * top[3] + bottom[2] * bottom[3] * (1 - top[3])) / alpha,
-          alpha
+          Number(parts[0]),
+          Number(parts[1]),
+          Number(parts[2]),
+          parts[3] == null ? 1 : Number(parts[3])
         ];
       }
 
-      function relativeLuminance(color) {
-        const convert = (value) => {
-          const normalized = value / 255;
-          return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-        };
-
-        return 0.2126 * convert(color[0]) + 0.7152 * convert(color[1]) + 0.0722 * convert(color[2]);
+      const hexMatch = input.match(/^#([0-9a-f]{3,8})$/i);
+      if (!hexMatch) return null;
+      const raw = hexMatch[1];
+      if (raw.length === 3) return raw.split("").map((char) => Number.parseInt(char + char, 16)).concat(1);
+      if (raw.length === 6) return [0, 2, 4].map((index) => Number.parseInt(raw.slice(index, index + 2), 16)).concat(1);
+      if (raw.length === 8) {
+        return [
+          Number.parseInt(raw.slice(0, 2), 16),
+          Number.parseInt(raw.slice(2, 4), 16),
+          Number.parseInt(raw.slice(4, 6), 16),
+          Number.parseInt(raw.slice(6, 8), 16) / 255
+        ];
       }
+      return null;
+    }
 
-      function contrastRatio(foreground, background) {
-        const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background));
-        const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background));
-        return (lighter + 0.05) / (darker + 0.05);
-      }
+    function composite(top, bottom) {
+      const alpha = top[3] + bottom[3] * (1 - top[3]);
+      if (alpha <= 0) return [255, 255, 255, 0];
+      return [
+        (top[0] * top[3] + bottom[0] * bottom[3] * (1 - top[3])) / alpha,
+        (top[1] * top[3] + bottom[1] * bottom[3] * (1 - top[3])) / alpha,
+        (top[2] * top[3] + bottom[2] * bottom[3] * (1 - top[3])) / alpha,
+        alpha
+      ];
+    }
 
-      let current = element;
-      const layers = [];
-      while (current) {
-        const style = getComputedStyle(current);
-        const background = parseColor(style.backgroundColor);
-        if (background && background[3] > 0) layers.push(background);
-        current = current.parentElement;
-      }
-
-      let resolvedBackground = [255, 255, 255, 1];
-      for (let index = layers.length - 1; index >= 0; index -= 1) {
-        resolvedBackground = composite(layers[index], resolvedBackground);
-      }
-
-      const style = getComputedStyle(element, options?.pseudo ?? undefined);
-      const foreground = parseColor(style.color);
-      if (!foreground) return null;
-
-      return {
-        ratio: contrastRatio(foreground, resolvedBackground),
-        foreground: foreground.slice(0, 3),
-        background: resolvedBackground.slice(0, 3)
+    function relativeLuminance(color) {
+      const convert = (value) => {
+        const normalized = value / 255;
+        return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
       };
-    },
-    { pseudo }
-  );
+
+      return 0.2126 * convert(color[0]) + 0.7152 * convert(color[1]) + 0.0722 * convert(color[2]);
+    }
+
+    function contrastRatio(foreground, background) {
+      const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background));
+      const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background));
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    let current = element;
+    const layers = [];
+    while (current) {
+      const style = getComputedStyle(current);
+      const background = parseColor(style.backgroundColor);
+      if (background && background[3] > 0) layers.push(background);
+      current = current.parentElement;
+    }
+
+    let resolvedBackground = [255, 255, 255, 1];
+    for (let index = layers.length - 1; index >= 0; index -= 1) {
+      resolvedBackground = composite(layers[index], resolvedBackground);
+    }
+
+    const style = getComputedStyle(element);
+    const foreground = parseColor(style.color);
+    if (!foreground) return null;
+
+    return {
+      ratio: contrastRatio(foreground, resolvedBackground),
+      foreground: foreground.slice(0, 3),
+      background: resolvedBackground.slice(0, 3)
+    };
+  });
 
   assert(result, `${label} contrast could not be measured.`);
+  assert(result.ratio >= 4.5, `${label} contrast failed: ${result.ratio}`);
   return result;
 }
 
-async function measureSvgReport(page, panelIds, textIds) {
-  return page.evaluate(
-    ({ panelIds, textIds }) => {
-      function parseColor(input) {
-        if (!input) return null;
-        const rgbaMatch = input.match(/rgba?\(([^)]+)\)/i);
-        if (rgbaMatch) {
-          const parts = rgbaMatch[1].split(",").map((part) => part.trim());
-          return [
-            Number(parts[0]),
-            Number(parts[1]),
-            Number(parts[2]),
-            parts[3] == null ? 1 : Number(parts[3])
-          ];
-        }
+async function validatePanel(locator, label) {
+  const report = await locator.first().evaluate((element) => {
+    const descendants = [element, ...element.querySelectorAll("*")];
+    const visibleTextNodes = descendants.filter((node) => {
+      const text = (node.textContent || "").trim();
+      if (!text) return false;
+      const style = getComputedStyle(node);
+      return style.display !== "none" && style.visibility !== "hidden";
+    });
 
-        const hexMatch = input.match(/^#([0-9a-f]{3,8})$/i);
-        if (!hexMatch) return null;
-        const raw = hexMatch[1];
-        if (raw.length === 3) return raw.split("").map((char) => Number.parseInt(char + char, 16)).concat(1);
-        if (raw.length === 6) return [0, 2, 4].map((index) => Number.parseInt(raw.slice(index, index + 2), 16)).concat(1);
-        if (raw.length === 8) {
-          return [
-            Number.parseInt(raw.slice(0, 2), 16),
-            Number.parseInt(raw.slice(2, 4), 16),
-            Number.parseInt(raw.slice(4, 6), 16),
-            Number.parseInt(raw.slice(6, 8), 16) / 255
-          ];
-        }
-        return null;
-      }
+    const fontSizes = visibleTextNodes.map((node) => Number.parseFloat(getComputedStyle(node).fontSize)).filter((value) => Number.isFinite(value));
 
-      function relativeLuminance(color) {
-        const convert = (value) => {
-          const normalized = value / 255;
-          return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-        };
+    return {
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      scrollHeight: element.scrollHeight,
+      clientHeight: element.clientHeight,
+      textCount: visibleTextNodes.length,
+      minFontSize: fontSizes.length ? Math.min(...fontSizes) : null
+    };
+  });
 
-        return 0.2126 * convert(color[0]) + 0.7152 * convert(color[1]) + 0.0722 * convert(color[2]);
-      }
+  assert(report.textCount > 0, `${label} rendered no text.`);
+  assert(report.scrollWidth <= report.clientWidth + 1, `${label} has horizontal overflow.`);
+  assert(report.scrollHeight <= report.clientHeight + 1, `${label} has vertical clipping.`);
+  assert(report.minFontSize == null || report.minFontSize >= 12, `${label} font size fell below 12px.`);
+  return report;
+}
 
-      function contrastRatio(foreground, background) {
-        const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background));
-        const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background));
-        return (lighter + 0.05) / (darker + 0.05);
-      }
+async function validateNoOverflow(page, label) {
+  const overflow = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth
+  }));
+  assert(overflow.scrollWidth <= overflow.clientWidth + 1, `${label} has horizontal overflow.`);
+}
 
-      function resolvedSvgColor(element, attributeName, cssProperty) {
-        return parseColor(getComputedStyle(element)[cssProperty]) ?? parseColor(element.getAttribute(attributeName) || "");
-      }
-
-      const panels = Object.fromEntries(
-        panelIds.map((id) => {
-          const element = document.getElementById(id);
-          if (!element) return [id, null];
-          return [
-            id,
-            {
-              x: Number(element.getAttribute("x") || 0),
-              y: Number(element.getAttribute("y") || 0),
-              width: Number(element.getAttribute("width") || 0),
-              height: Number(element.getAttribute("height") || 0),
-              fill: resolvedSvgColor(element, "fill", "fill")
-            }
-          ];
-        })
-      );
-
-      return textIds.map(({ id, panelId }) => {
-        const element = document.getElementById(id);
-        const panel = panels[panelId];
-        if (!element || !panel || !panel.fill) {
-          return { id, panelId, missing: true };
-        }
-
-        const bbox = element.getBBox();
-        const fill = resolvedSvgColor(element, "fill", "fill");
-        return {
-          id,
-          panelId,
-          contrast: fill ? contrastRatio(fill, panel.fill) : null,
-          bbox: {
-            x: bbox.x,
-            y: bbox.y,
-            width: bbox.width,
-            height: bbox.height
-          },
-          withinPanel:
-            bbox.x >= panel.x + 18 &&
-            bbox.y >= panel.y + 18 &&
-            bbox.x + bbox.width <= panel.x + panel.width - 18 &&
-            bbox.y + bbox.height <= panel.y + panel.height - 18
-        };
-      });
-    },
-    { panelIds, textIds }
-  );
+async function readSvgText(route) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await page.goto(`${baseUrl}${route}`, { waitUntil: "load", timeout: 120000 });
+    return await page.evaluate(() =>
+      Array.from(document.querySelectorAll("text"))
+        .map((node) => (node.textContent || "").trim())
+        .filter(Boolean)
+    );
+  } finally {
+    await page.close();
+  }
 }
 
 const browser = await chromium.launch({
@@ -235,137 +178,81 @@ const browser = await chromium.launch({
   executablePath
 });
 
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-
 try {
-  await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 120000 });
+  const buildmateSvgText = await readSvgText("/artifacts/buildmate-ci-chart.svg");
+  const atlasSvgText = await readSvgText("/artifacts/atlas-research-board.svg");
 
-  const observedPatternSection = page.locator("section").filter({ has: page.getByText("Observed pattern", { exact: true }) }).first();
-  const queueSnapshotSection = page.locator("section").filter({ has: page.getByText("Queue snapshot", { exact: true }) }).first();
-  const atlasToolSection = page.locator("section").filter({ has: page.getByText("web.run", { exact: true }) }).first();
-  const buildmateToolSection = page.locator("section").filter({ has: page.getByText("browser verify", { exact: true }) }).first();
-  const schemaSection = page.locator("section").filter({ has: page.getByText("expense_anomaly", { exact: true }) }).first();
-  const navRail = page.locator('aside[aria-label="Primary navigation"]').first();
-
-  await observedPatternSection.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(200);
-
-  const observedPatternContrast = await measureElementContrast(observedPatternSection.locator("pre").first(), "Observed pattern JSON");
-  const queueSnapshotContrast = await measureElementContrast(queueSnapshotSection.locator("pre").first(), "Queue snapshot JSON");
-  const atlasToolContrast = await measureElementContrast(atlasToolSection.getByText(/Collected launch notes/i).first(), "Atlas tool output");
-  const buildmateToolContrast = await measureElementContrast(buildmateToolSection.getByText(/Confirmed the spinner race/i).first(), "BuildMate tool output");
-  const schemaSummaryContrast = await measureElementContrast(schemaSection.getByText(/Classification used for finance alerts/i).first(), "Schema summary");
-  const schemaFieldContrast = await measureElementContrast(schemaSection.getByText("recommended_action", { exact: true }).first(), "Schema field");
-
-  assert(observedPatternContrast.ratio >= 4.5, `Observed pattern contrast failed: ${observedPatternContrast.ratio}`);
-  assert(queueSnapshotContrast.ratio >= 4.5, `Queue snapshot contrast failed: ${queueSnapshotContrast.ratio}`);
-  assert(atlasToolContrast.ratio >= 4.5, `Atlas tool output contrast failed: ${atlasToolContrast.ratio}`);
-  assert(buildmateToolContrast.ratio >= 4.5, `BuildMate tool output contrast failed: ${buildmateToolContrast.ratio}`);
-  assert(schemaSummaryContrast.ratio >= 4.5, `Schema summary contrast failed: ${schemaSummaryContrast.ratio}`);
-  assert(schemaFieldContrast.ratio >= 4.5, `Schema field contrast failed: ${schemaFieldContrast.ratio}`);
-
-  const logoGeometry = await navRail.evaluate(() => {
-    const mark = document.querySelector("a > span");
-    const svg = mark?.querySelector("svg");
-    if (!mark || !svg) return null;
-    const markRect = mark.getBoundingClientRect();
-    const svgRect = svg.getBoundingClientRect();
-    return {
-      markWidth: markRect.width,
-      markHeight: markRect.height,
-      offsetX: Math.abs(markRect.left + markRect.width / 2 - (svgRect.left + svgRect.width / 2)),
-      offsetY: Math.abs(markRect.top + markRect.height / 2 - (svgRect.top + svgRect.height / 2))
-    };
-  });
-
-  assert(logoGeometry, "Logo geometry could not be measured.");
-  assert(logoGeometry.offsetX <= 1 && logoGeometry.offsetY <= 1, `Logo mark is not centered: ${JSON.stringify(logoGeometry)}`);
-
-  const screenshotPaths = {
-    observedPattern: await screenshotLocator(observedPatternSection, "observed-pattern-block.png"),
-    queueSnapshot: await screenshotLocator(queueSnapshotSection, "queue-snapshot-block.png"),
-    atlasTool: await screenshotLocator(atlasToolSection, "atlas-tool-block.png"),
-    buildmateTool: await screenshotLocator(buildmateToolSection, "buildmate-tool-block.png"),
-    schema: await screenshotLocator(schemaSection, "schema-block.png"),
-    logoNav: await screenshotLocator(navRail, "logo-nav-desktop.png")
-  };
-
-  const buildmateBounds = [];
-  const buildmateScreens = {};
-  for (const viewport of viewports) {
-    await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.goto(`${baseUrl}/artifacts/buildmate-ci-chart.svg`, { waitUntil: "load", timeout: 120000 });
-    buildmateScreens[viewport.name] = await screenshotSvg(page, `buildmate-${viewport.name}.png`);
-    const report = await measureSvgReport(
-      page,
-      ["buildmate-root-cause-panel", "buildmate-patch-plan-panel"],
-      [
-        { id: "buildmate-root-cause-title", panelId: "buildmate-root-cause-panel" },
-        { id: "buildmate-root-cause-1", panelId: "buildmate-root-cause-panel" },
-        { id: "buildmate-root-cause-2", panelId: "buildmate-root-cause-panel" },
-        { id: "buildmate-patch-plan-title", panelId: "buildmate-patch-plan-panel" },
-        { id: "buildmate-patch-plan-1", panelId: "buildmate-patch-plan-panel" },
-        { id: "buildmate-patch-plan-2", panelId: "buildmate-patch-plan-panel" },
-        { id: "buildmate-patch-plan-3", panelId: "buildmate-patch-plan-panel" }
-      ]
-    );
-    buildmateBounds.push({ viewport: viewport.name, report });
+  const combinedSvgText = [...buildmateSvgText, ...atlasSvgText].join(" ").toLowerCase();
+  for (const phrase of forbiddenSvgText) {
+    assert(!combinedSvgText.includes(phrase), `Forbidden SVG text still present: ${phrase}`);
   }
-
-  for (const entry of buildmateBounds) {
-    for (const report of entry.report) {
-      assert(!report.missing, `Missing BuildMate SVG element ${report.id}`);
-      assert(report.withinPanel, `BuildMate SVG element ${report.id} overflowed at ${entry.viewport}`);
-      assert(report.contrast != null && report.contrast >= 7, `BuildMate SVG element ${report.id} contrast failed at ${entry.viewport}: ${report.contrast}`);
-    }
-  }
-
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${baseUrl}/artifacts/atlas-research-board.svg`, { waitUntil: "load", timeout: 120000 });
-  const atlasSvgReport = await measureSvgReport(
-    page,
-    ["atlas-reference-panel"],
-    [
-      { id: "atlas-reference-title", panelId: "atlas-reference-panel" },
-      { id: "atlas-reference-note-1", panelId: "atlas-reference-panel" },
-      { id: "atlas-reference-note-2", panelId: "atlas-reference-panel" },
-      { id: "atlas-reference-note-3", panelId: "atlas-reference-panel" }
-    ]
-  );
-
-  for (const report of atlasSvgReport) {
-    assert(!report.missing, `Missing Atlas SVG element ${report.id}`);
-    assert(report.withinPanel, `Atlas SVG element ${report.id} overflowed`);
-    assert(report.contrast != null && report.contrast >= 7, `Atlas SVG element ${report.id} contrast failed: ${report.contrast}`);
-  }
-
-  screenshotPaths.atlasReference = await screenshotSvg(page, "atlas-reference-notes.png");
 
   const result = {
     ok: true,
     baseUrl,
     artifactDir,
-    contrast: {
-      observedPattern: observedPatternContrast,
-      queueSnapshot: queueSnapshotContrast,
-      atlasToolOutput: atlasToolContrast,
-      buildmateToolOutput: buildmateToolContrast,
-      schemaSummary: schemaSummaryContrast,
-      schemaField: schemaFieldContrast,
-      atlasReferenceNotes: Object.fromEntries(atlasSvgReport.map((item) => [item.id, item.contrast])),
-      buildmatePanels: Object.fromEntries(buildmateBounds[0].report.map((item) => [item.id, item.contrast]))
+    svgText: {
+      buildmate: buildmateSvgText,
+      atlas: atlasSvgText
     },
-    buildmate: {
-      checkedViewports: buildmateBounds.map((item) => item.viewport),
-      reports: buildmateBounds,
-      screenshots: buildmateScreens
-    },
-    logo: {
-      centered: true,
-      geometry: logoGeometry
-    },
-    screenshots: screenshotPaths
+    contrast: {},
+    panels: {},
+    screenshots: {}
   };
+
+  for (const viewport of viewports) {
+    const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height } });
+    try {
+      await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 120000 });
+      await validateNoOverflow(page, `${viewport.name} home`);
+
+      const buildmateCard = page.locator('[data-artifact="buildmate-artifact"]').first();
+      await buildmateCard.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(200);
+
+      const atlasCard = page.locator('[data-artifact="atlas-artifact"]').first();
+      await atlasCard.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(200);
+
+      const buildmateChart = page.locator('[data-artifact-panel="buildmate-artifact-visual"]').first();
+      const buildmateRootCause = page.locator('[data-artifact-panel="buildmate-root-cause"]').first();
+      const buildmatePatchPlan = page.locator('[data-artifact-panel="buildmate-patch-plan"]').first();
+      const atlasVisual = page.locator('[data-artifact-panel="atlas-artifact-visual"]').first();
+      const atlasFields = page.locator('[data-artifact-panel="atlas-evidence-fields"]').first();
+      const atlasReference = page.locator('[data-artifact-panel="atlas-reference-notes"]').first();
+      const atlasRecommendation = page.locator('[data-artifact-panel="atlas-top-recommendation"]').first();
+
+      result.panels[viewport.name] = {
+        buildmateRootCause: await validatePanel(buildmateRootCause, `${viewport.name} BuildMate root cause`),
+        buildmatePatchPlan: await validatePanel(buildmatePatchPlan, `${viewport.name} BuildMate patch plan`),
+        atlasFields: await validatePanel(atlasFields, `${viewport.name} Atlas repeated evidence fields`),
+        atlasReference: await validatePanel(atlasReference, `${viewport.name} Atlas reference notes`),
+        atlasRecommendation: await validatePanel(atlasRecommendation, `${viewport.name} Atlas top recommendation`)
+      };
+
+      result.contrast[viewport.name] = {
+        buildmateRootCauseHeading: await measureElementContrast(buildmateRootCause.getByRole("heading", { name: "Root cause" }), `${viewport.name} BuildMate root cause heading`),
+        buildmateRootCauseBody: await measureElementContrast(buildmateRootCause.locator("p").first(), `${viewport.name} BuildMate root cause body`),
+        buildmatePatchHeading: await measureElementContrast(buildmatePatchPlan.getByRole("heading", { name: "Patch plan" }), `${viewport.name} BuildMate patch plan heading`),
+        buildmatePatchBody: await measureElementContrast(buildmatePatchPlan.locator("p").first(), `${viewport.name} BuildMate patch plan body`),
+        atlasReferenceHeading: await measureElementContrast(atlasReference.getByRole("heading", { name: "Reference notes" }), `${viewport.name} Atlas reference notes heading`),
+        atlasReferenceBody: await measureElementContrast(atlasReference.locator("p").first(), `${viewport.name} Atlas reference notes body`),
+        atlasRecommendationHeading: await measureElementContrast(atlasRecommendation.getByRole("heading", { name: "Top recommendation" }), `${viewport.name} Atlas top recommendation heading`),
+        atlasRecommendationBody: await measureElementContrast(atlasRecommendation.locator("p").first(), `${viewport.name} Atlas top recommendation body`)
+      };
+
+      if (viewport.name === "desktop" || viewport.name === "tiny-mobile") {
+        result.screenshots[`${viewport.name}-buildmate-chart`] = await screenshotLocator(buildmateChart, `${viewport.name}-buildmate-chart.png`);
+        result.screenshots[`${viewport.name}-buildmate-root-cause`] = await screenshotLocator(buildmateRootCause, `${viewport.name}-buildmate-root-cause.png`);
+        result.screenshots[`${viewport.name}-buildmate-patch-plan`] = await screenshotLocator(buildmatePatchPlan, `${viewport.name}-buildmate-patch-plan.png`);
+        result.screenshots[`${viewport.name}-atlas-route-map`] = await screenshotLocator(atlasVisual, `${viewport.name}-atlas-route-map.png`);
+        result.screenshots[`${viewport.name}-atlas-reference-notes`] = await screenshotLocator(atlasReference, `${viewport.name}-atlas-reference-notes.png`);
+        result.screenshots[`${viewport.name}-atlas-top-recommendation`] = await screenshotLocator(atlasRecommendation, `${viewport.name}-atlas-top-recommendation.png`);
+      }
+    } finally {
+      await page.close();
+    }
+  }
 
   console.log(JSON.stringify(result, null, 2));
 } finally {
