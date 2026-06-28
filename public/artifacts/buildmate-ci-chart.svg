@@ -40,7 +40,7 @@
     <tspan x="998" dy="0">2. Emit the id in the browser trace</tspan>
     <tspan x="998" dy="24">summary.</tspan>
   </text>
-  <text id="buildmate-patch-plan-3" x="998" y="770" fill="#180018" font-size="17" font-family="Manrope, Arial, sans-serif">
+  <text id="buildmate-patch-plan-3" x="998" y="754" fill="#180018" font-size="17" font-family="Manrope, Arial, sans-serif">
     <tspan x="998" dy="0">3. Re-run 390px and 1440px flows</tspan>
     <tspan x="998" dy="24">before merge.</tspan>
   </text>

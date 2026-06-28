@@ -31,6 +31,12 @@ async function screenshotPage(page, fileName) {
   return filePath;
 }
 
+async function screenshotSvg(page, fileName) {
+  const filePath = path.join(artifactDir, fileName);
+  await page.locator("svg").first().screenshot({ path: filePath, animations: "disabled", timeout: 120000 });
+  return filePath;
+}
+
 async function measureElementContrast(locator, label, { pseudo = null } = {}) {
   const result = await locator.first().evaluate(
     (element, options) => {
@@ -172,6 +178,10 @@ async function measureSvgReport(page, panelIds, textIds) {
         return (lighter + 0.05) / (darker + 0.05);
       }
 
+      function resolvedSvgColor(element, attributeName, cssProperty) {
+        return parseColor(getComputedStyle(element)[cssProperty]) ?? parseColor(element.getAttribute(attributeName) || "");
+      }
+
       const panels = Object.fromEntries(
         panelIds.map((id) => {
           const element = document.getElementById(id);
@@ -183,7 +193,7 @@ async function measureSvgReport(page, panelIds, textIds) {
               y: Number(element.getAttribute("y") || 0),
               width: Number(element.getAttribute("width") || 0),
               height: Number(element.getAttribute("height") || 0),
-              fill: parseColor(element.getAttribute("fill") || getComputedStyle(element).fill)
+              fill: resolvedSvgColor(element, "fill", "fill")
             }
           ];
         })
@@ -197,7 +207,7 @@ async function measureSvgReport(page, panelIds, textIds) {
         }
 
         const bbox = element.getBBox();
-        const fill = parseColor(element.getAttribute("fill") || getComputedStyle(element).fill);
+        const fill = resolvedSvgColor(element, "fill", "fill");
         return {
           id,
           panelId,
@@ -278,7 +288,7 @@ try {
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto(`${baseUrl}/artifacts/buildmate-ci-chart.svg`, { waitUntil: "load", timeout: 120000 });
-    buildmateScreens[viewport.name] = await screenshotPage(page, `buildmate-${viewport.name}.png`);
+    buildmateScreens[viewport.name] = await screenshotSvg(page, `buildmate-${viewport.name}.png`);
     const report = await measureSvgReport(
       page,
       ["buildmate-root-cause-panel", "buildmate-patch-plan-panel"],
@@ -322,7 +332,7 @@ try {
     assert(report.contrast != null && report.contrast >= 7, `Atlas SVG element ${report.id} contrast failed: ${report.contrast}`);
   }
 
-  screenshotPaths.atlasReference = await screenshotPage(page, "atlas-reference-notes.png");
+  screenshotPaths.atlasReference = await screenshotSvg(page, "atlas-reference-notes.png");
 
   const result = {
     ok: true,
