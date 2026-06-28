@@ -38,7 +38,7 @@ function SectionBlock({ section }: { section: PostSection }) {
       <section className="min-w-0 rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] p-4">
         <p className="text-sm font-semibold text-[var(--space-950)]">{section.title}</p>
         <pre
-          className="mt-3 max-w-full overflow-x-auto whitespace-pre-wrap rounded-[16px] bg-[var(--space-950)]/95 p-4 text-xs leading-6 text-white"
+          className="mt-3 max-w-full overflow-x-auto whitespace-pre-wrap rounded-[16px] bg-[rgb(24,0,24)] p-4 text-xs leading-6 text-white/[0.96]"
           tabIndex={0}
           aria-label={`${section.title} JSON output`}
         >

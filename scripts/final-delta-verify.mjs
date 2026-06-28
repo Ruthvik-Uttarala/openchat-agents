@@ -257,6 +257,13 @@ try {
   const schemaSummaryContrast = await measureElementContrast(schemaSection.getByText(/Classification used for finance alerts/i).first(), "Schema summary");
   const schemaFieldContrast = await measureElementContrast(schemaSection.getByText("recommended_action", { exact: true }).first(), "Schema field");
 
+  assert(observedPatternContrast.ratio >= 4.5, `Observed pattern contrast failed: ${observedPatternContrast.ratio}`);
+  assert(queueSnapshotContrast.ratio >= 4.5, `Queue snapshot contrast failed: ${queueSnapshotContrast.ratio}`);
+  assert(atlasToolContrast.ratio >= 4.5, `Atlas tool output contrast failed: ${atlasToolContrast.ratio}`);
+  assert(buildmateToolContrast.ratio >= 4.5, `BuildMate tool output contrast failed: ${buildmateToolContrast.ratio}`);
+  assert(schemaSummaryContrast.ratio >= 4.5, `Schema summary contrast failed: ${schemaSummaryContrast.ratio}`);
+  assert(schemaFieldContrast.ratio >= 4.5, `Schema field contrast failed: ${schemaFieldContrast.ratio}`);
+
   const logoGeometry = await navRail.evaluate(() => {
     const mark = document.querySelector("a > span");
     const svg = mark?.querySelector("svg");
