@@ -114,11 +114,15 @@ async function ensureLoggedIn(context, page) {
 async function verifyFollowFlow(page, agentHandle, initialFollowing) {
   await page.goto(`${baseUrl}/agent/${agentHandle}`, { waitUntil: "networkidle", timeout: 120000 });
   const button = page.getByRole("button", { name: /follow|following/i }).first();
+  const baselineFeed = await readAuthedJson(page, "/api/feed");
+  const baselineAgent = baselineFeed.agents.find((agent) => agent.handle === agentHandle);
+  assert(baselineAgent, `Agent ${agentHandle} is missing from the feed response.`);
   await button.click();
   await page.waitForTimeout(1000);
 
-  const afterToggle = await readAuthedJson(page, `/api/agents/${agentHandle}`);
-  assert(afterToggle.agent.isFollowing === !initialFollowing, "Follow toggle did not persist in the API response.");
+  const afterToggleFeed = await readAuthedJson(page, "/api/feed");
+  const afterToggle = afterToggleFeed.agents.find((agent) => agent.handle === agentHandle);
+  assert(afterToggle?.isFollowing === !initialFollowing, "Follow toggle did not persist in the feed response.");
 
   await page.reload({ waitUntil: "networkidle", timeout: 120000 });
   const textAfterReload = (await button.textContent())?.trim();
@@ -129,8 +133,9 @@ async function verifyFollowFlow(page, agentHandle, initialFollowing) {
 
   await button.click();
   await page.waitForTimeout(1000);
-  const reverted = await readAuthedJson(page, `/api/agents/${agentHandle}`);
-  assert(reverted.agent.isFollowing === initialFollowing, "Follow state did not revert.");
+  const revertedFeed = await readAuthedJson(page, "/api/feed");
+  const reverted = revertedFeed.agents.find((agent) => agent.handle === agentHandle);
+  assert(reverted?.isFollowing === initialFollowing, "Follow state did not revert.");
 
   await page.reload({ waitUntil: "networkidle", timeout: 120000 });
   const revertedLabel = (await button.textContent())?.trim();
@@ -138,6 +143,22 @@ async function verifyFollowFlow(page, agentHandle, initialFollowing) {
     (initialFollowing && revertedLabel === "Following") || (!initialFollowing && revertedLabel === "Follow"),
     "Follow button did not return to its original state after reload."
   );
+
+  return {
+    handle: agentHandle,
+    before: {
+      isFollowing: Boolean(baselineAgent.isFollowing),
+      followersCount: baselineAgent.followersCount ?? null
+    },
+    afterToggle: {
+      isFollowing: Boolean(afterToggle?.isFollowing),
+      followersCount: afterToggle?.followersCount ?? null
+    },
+    afterCleanup: {
+      isFollowing: Boolean(reverted?.isFollowing),
+      followersCount: reverted?.followersCount ?? null
+    }
+  };
 }
 
 async function verifyReactionFlow(page, postId, kind, initialValue) {
@@ -145,6 +166,9 @@ async function verifyReactionFlow(page, postId, kind, initialValue) {
   const article = page.locator(`#post-${postId}`);
   await article.scrollIntoViewIfNeeded();
   const button = article.locator('button[aria-pressed]').nth(kind === "repost" ? 0 : 1);
+  const baselineFeed = await readAuthedJson(page, "/api/feed");
+  const baselinePost = baselineFeed.posts.find((post) => post.id === postId);
+  assert(baselinePost, `Post ${postId} is missing before ${kind}.`);
 
   await button.click();
   await page.waitForTimeout(800);
@@ -163,12 +187,31 @@ async function verifyReactionFlow(page, postId, kind, initialValue) {
   const revertedFeed = await readAuthedJson(page, "/api/feed");
   const revertedPost = revertedFeed.posts.find((post) => post.id === postId);
   assert(revertedPost.viewer[kind === "repost" ? "reposted" : "liked"] === initialValue, `${kind} state did not revert.`);
+
+  return {
+    kind,
+    before: {
+      viewer: kind === "repost" ? baselinePost.viewer.reposted : baselinePost.viewer.liked,
+      count: kind === "repost" ? baselinePost.reposts : baselinePost.likes
+    },
+    afterToggle: {
+      viewer: kind === "repost" ? toggledPost.viewer.reposted : toggledPost.viewer.liked,
+      count: kind === "repost" ? toggledPost.reposts : toggledPost.likes
+    },
+    afterCleanup: {
+      viewer: kind === "repost" ? revertedPost.viewer.reposted : revertedPost.viewer.liked,
+      count: kind === "repost" ? revertedPost.reposts : revertedPost.likes
+    }
+  };
 }
 
 async function verifyReplyFlow(page, postId) {
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 120000 });
   const article = page.locator(`#post-${postId}`);
   await article.scrollIntoViewIfNeeded();
+  const beforeFeed = await readAuthedJson(page, "/api/feed");
+  const beforePost = beforeFeed.posts.find((post) => post.id === postId);
+  assert(beforePost, `Post ${postId} is missing before reply.`);
   const toggleThread = article.getByRole("button", { name: /show thread|hide thread/i }).first();
   await toggleThread.click();
   const textarea = article.locator('textarea[placeholder="Add a public reply"]').first();
@@ -185,6 +228,17 @@ async function verifyReplyFlow(page, postId) {
   await toggleThread.click();
   await page.waitForTimeout(300);
   assert(await article.getByText(replyBody).isVisible().catch(() => false), "Reply text is missing after reload.");
+
+  return {
+    postId,
+    before: {
+      replyCount: beforePost.replies
+    },
+    afterCreate: {
+      replyCount: repliedPost.replies
+    },
+    replyBody
+  };
 }
 
 async function verifyShareFlow(page, postId) {
@@ -200,6 +254,7 @@ async function verifyShareFlow(page, postId) {
 
 async function verifyPostCreationAndMedia(page) {
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 120000 });
+  const beforeFeed = await readAuthedJson(page, "/api/feed");
 
   const textarea = page.locator('textarea[placeholder="Share the latest result, trail, or lesson."]').first();
   await textarea.fill(postBody);
@@ -229,22 +284,28 @@ async function verifyPostCreationAndMedia(page) {
   assert(mediaStatus.head === 200, `Uploaded media HEAD returned ${mediaStatus.head}.`);
   assert(mediaStatus.get === 200, `Uploaded media GET returned ${mediaStatus.get}.`);
 
-  return createdPost;
+  return {
+    createdPost,
+    beforePostCount: beforeFeed.posts.length,
+    afterPostCount: feed.posts.length,
+    mediaStatus
+  };
 }
 
 async function captureSignedInScreenshots(page, mutablePostId) {
+  const files = {};
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
     await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 120000 });
-    await screenshot(page, viewport.name, "home");
-    await screenshot(page, viewport.name, "composer");
+    files[`${viewport.name}-home`] = await screenshot(page, viewport.name, "home");
+    files[`${viewport.name}-composer`] = await screenshot(page, viewport.name, "composer");
 
     await page.goto(`${baseUrl}/search?q=tool`, { waitUntil: "networkidle", timeout: 120000 });
-    await screenshot(page, viewport.name, "search");
+    files[`${viewport.name}-search`] = await screenshot(page, viewport.name, "search");
 
     await page.goto(`${baseUrl}/agent/atlas`, { waitUntil: "networkidle", timeout: 120000 });
-    await screenshot(page, viewport.name, "agent-atlas");
+    files[`${viewport.name}-agent-atlas`] = await screenshot(page, viewport.name, "agent-atlas");
 
     await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 120000 });
     const article = page.locator(`#post-${mutablePostId}`);
@@ -252,8 +313,9 @@ async function captureSignedInScreenshots(page, mutablePostId) {
     const toggleThread = article.getByRole("button", { name: /show thread|hide thread/i }).first();
     await toggleThread.click();
     await page.waitForTimeout(400);
-    await screenshot(page, viewport.name, "thread");
+    files[`${viewport.name}-thread`] = await screenshot(page, viewport.name, "thread");
   }
+  return files;
 }
 
 const browser = await chromium.launchPersistentContext(userDataDir, {
@@ -296,30 +358,41 @@ try {
   const mutablePost = feed.posts.find((post) => !post.author.ownedByViewer) || feed.posts[0];
   assert(mutablePost, "No post is available for mutation verification.");
 
-  await verifyFollowFlow(authedPage, mutableAgent.handle, Boolean(mutableAgent.isFollowing));
-  await verifyReactionFlow(authedPage, mutablePost.id, "repost", Boolean(mutablePost.viewer.reposted));
-  await verifyReactionFlow(authedPage, mutablePost.id, "like", Boolean(mutablePost.viewer.liked));
-  await verifyReplyFlow(authedPage, mutablePost.id);
+  const followResult = await verifyFollowFlow(authedPage, mutableAgent.handle, Boolean(mutableAgent.isFollowing));
+  const repostResult = await verifyReactionFlow(authedPage, mutablePost.id, "repost", Boolean(mutablePost.viewer.reposted));
+  const likeResult = await verifyReactionFlow(authedPage, mutablePost.id, "like", Boolean(mutablePost.viewer.liked));
+  const replyResult = await verifyReplyFlow(authedPage, mutablePost.id);
   await verifyShareFlow(authedPage, mutablePost.id);
-  const createdPost = await verifyPostCreationAndMedia(authedPage);
-  await captureSignedInScreenshots(authedPage, mutablePost.id);
+  const createdPostResult = await verifyPostCreationAndMedia(authedPage);
+  const screenshotFiles = await captureSignedInScreenshots(authedPage, mutablePost.id);
 
   results = {
     ok: true,
     baseUrl,
     artifactDir,
     ownedAgents: feed.ownedAgents.map((agent) => agent.handle),
-    follow: {
-      handle: mutableAgent.handle
-    },
+    uniqueId,
+    replyBody,
+    postBody,
+    taskLabel,
+    follow: followResult,
+    repost: repostResult,
+    like: likeResult,
+    reply: replyResult,
     post: {
-      id: mutablePost.id
+      id: mutablePost.id,
+      initialReplies: mutablePost.replies
     },
     createdPost: {
-      id: createdPost.id,
-      canonicalPath: createdPost.canonicalPath,
-      mediaUrl: createdPost.media?.publicUrl ?? null
+      id: createdPostResult.createdPost.id,
+      canonicalPath: createdPostResult.createdPost.canonicalPath,
+      mediaUrl: createdPostResult.createdPost.media?.publicUrl ?? null,
+      mediaObjectKey: createdPostResult.createdPost.media?.objectKey ?? null,
+      beforePostCount: createdPostResult.beforePostCount,
+      afterPostCount: createdPostResult.afterPostCount,
+      mediaStatus: createdPostResult.mediaStatus
     },
+    screenshots: screenshotFiles,
     consoleErrors,
     requestFailures
   };

@@ -12,10 +12,19 @@ const items = [
 
 function LogoMark() {
   return (
-    <span className="relative flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#6a64ff,#3d2ad5)] text-xl font-extrabold text-white shadow-[0_16px_34px_rgba(46,25,87,0.38)]">
-      o
-      <span className="absolute left-2 top-2 h-1.5 w-1.5 rounded-full bg-white/90" />
-      <span className="absolute right-2.5 top-5 h-2.5 w-2.5 rounded-full border border-white/70" />
+    <span className="relative flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#6a64ff,#3d2ad5)] text-white shadow-[0_16px_34px_rgba(46,25,87,0.38)]">
+      <svg
+        viewBox="0 0 48 48"
+        aria-hidden="true"
+        className="h-8 w-8 overflow-visible"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="24" cy="24" r="11" stroke="white" strokeWidth="4" />
+        <circle cx="24" cy="24" r="3.2" fill="white" />
+        <circle cx="32.8" cy="17.2" r="2.7" fill="white" fillOpacity="0.94" />
+        <path d="M15.5 28.8C18.1 33 22.3 35.4 27.3 35.4" stroke="white" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.9" />
+      </svg>
     </span>
   );
 }

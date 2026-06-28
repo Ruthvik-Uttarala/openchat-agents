@@ -19,15 +19,29 @@
   <text x="552" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Retry</text>
   <text x="678" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Patched</text>
   <text x="780" y="744" fill="#90777F" font-size="18" font-family="Manrope, Arial, sans-serif">Verified</text>
-  <rect x="962" y="246" width="386" height="260" rx="28" fill="#180018"/>
-  <text x="998" y="306" fill="white" font-size="26" font-family="Manrope, Arial, sans-serif" font-weight="800">Root cause</text>
+  <rect id="buildmate-root-cause-panel" x="962" y="246" width="386" height="260" rx="28" fill="#180018"/>
+  <text id="buildmate-root-cause-title" x="998" y="306" fill="white" font-size="26" font-family="Manrope, Arial, sans-serif" font-weight="800">Root cause</text>
   <text x="998" y="364" fill="#F2B962" font-size="18" font-family="Manrope, Arial, sans-serif" font-weight="700">•</text>
-  <text x="1030" y="364" fill="#E6DEEE" font-size="18" font-family="Manrope, Arial, sans-serif">Optimistic cart state finished before the order id existed.</text>
-  <text x="998" y="424" fill="#F2B962" font-size="18" font-family="Manrope, Arial, sans-serif" font-weight="700">•</text>
-  <text x="1030" y="424" fill="#E6DEEE" font-size="18" font-family="Manrope, Arial, sans-serif">The flaky branch only surfaced on small viewport navigation timing.</text>
-  <rect x="962" y="544" width="386" height="268" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
-  <text x="998" y="604" fill="#180018" font-size="26" font-family="Manrope, Arial, sans-serif" font-weight="800">Patch plan</text>
-  <text x="998" y="662" fill="#180018" font-size="18" font-family="Manrope, Arial, sans-serif">1. Block submit until order id exists.</text>
-  <text x="998" y="712" fill="#180018" font-size="18" font-family="Manrope, Arial, sans-serif">2. Emit the id in the browser trace summary.</text>
-  <text x="998" y="762" fill="#180018" font-size="18" font-family="Manrope, Arial, sans-serif">3. Re-run 390px and 1440px flows before merge.</text>
+  <text id="buildmate-root-cause-1" x="1030" y="362" fill="#E6DEEE" font-size="17" font-family="Manrope, Arial, sans-serif">
+    <tspan x="1030" dy="0">Optimistic cart state finished</tspan>
+    <tspan x="1030" dy="26">before the order id existed.</tspan>
+  </text>
+  <text x="998" y="434" fill="#F2B962" font-size="18" font-family="Manrope, Arial, sans-serif" font-weight="700">•</text>
+  <text id="buildmate-root-cause-2" x="1030" y="432" fill="#E6DEEE" font-size="17" font-family="Manrope, Arial, sans-serif">
+    <tspan x="1030" dy="0">The flaky branch only surfaced on</tspan>
+    <tspan x="1030" dy="26">small viewport navigation timing.</tspan>
+  </text>
+  <rect id="buildmate-patch-plan-panel" x="962" y="544" width="386" height="268" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
+  <text id="buildmate-patch-plan-title" x="998" y="604" fill="#180018" font-size="26" font-family="Manrope, Arial, sans-serif" font-weight="800">Patch plan</text>
+  <text id="buildmate-patch-plan-1" x="998" y="662" fill="#180018" font-size="17" font-family="Manrope, Arial, sans-serif">
+    <tspan x="998" dy="0">1. Block submit until order id exists.</tspan>
+  </text>
+  <text id="buildmate-patch-plan-2" x="998" y="706" fill="#180018" font-size="17" font-family="Manrope, Arial, sans-serif">
+    <tspan x="998" dy="0">2. Emit the id in the browser trace</tspan>
+    <tspan x="998" dy="24">summary.</tspan>
+  </text>
+  <text id="buildmate-patch-plan-3" x="998" y="770" fill="#180018" font-size="17" font-family="Manrope, Arial, sans-serif">
+    <tspan x="998" dy="0">3. Re-run 390px and 1440px flows</tspan>
+    <tspan x="998" dy="24">before merge.</tspan>
+  </text>
 </svg>

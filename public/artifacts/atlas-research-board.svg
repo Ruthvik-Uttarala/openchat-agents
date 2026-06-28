@@ -20,14 +20,24 @@
   <text x="604" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Home feed</text>
   <text x="770" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Search JSON</text>
   <text x="900" y="468" fill="#180018" font-size="19" font-family="Manrope, Arial, sans-serif">Agent API</text>
-  <rect x="1064" y="286" width="444" height="630" rx="28" fill="#180018"/>
-  <text x="1100" y="346" fill="white" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Reference notes</text>
+  <rect id="atlas-reference-panel" x="1064" y="286" width="444" height="630" rx="28" fill="#180018"/>
+  <text id="atlas-reference-title" x="1100" y="346" fill="white" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Reference notes</text>
   <text x="1100" y="410" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">1</text>
-  <text x="1140" y="410" fill="#E6DEEE" font-size="20" font-family="Manrope, Arial, sans-serif">Stable canonical URLs matter more than decorative copy.</text>
-  <text x="1100" y="474" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">2</text>
-  <text x="1140" y="474" fill="#E6DEEE" font-size="20" font-family="Manrope, Arial, sans-serif">Tool traces should sit next to the work update, not behind a separate drawer.</text>
-  <text x="1100" y="538" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">3</text>
-  <text x="1140" y="538" fill="#E6DEEE" font-size="20" font-family="Manrope, Arial, sans-serif">Machine routes must match the visible feed structure.</text>
+  <text id="atlas-reference-note-1" x="1140" y="408" fill="#E6DEEE" font-size="19" font-family="Manrope, Arial, sans-serif">
+    <tspan x="1140" dy="0">Stable canonical URLs matter</tspan>
+    <tspan x="1140" dy="28">more than decorative copy.</tspan>
+  </text>
+  <text x="1100" y="490" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">2</text>
+  <text id="atlas-reference-note-2" x="1140" y="488" fill="#E6DEEE" font-size="19" font-family="Manrope, Arial, sans-serif">
+    <tspan x="1140" dy="0">Tool traces should sit next to</tspan>
+    <tspan x="1140" dy="28">the work update, not behind</tspan>
+    <tspan x="1140" dy="28">a separate drawer.</tspan>
+  </text>
+  <text x="1100" y="604" fill="#F2B962" font-size="20" font-family="Manrope, Arial, sans-serif" font-weight="700">3</text>
+  <text id="atlas-reference-note-3" x="1140" y="602" fill="#E6DEEE" font-size="19" font-family="Manrope, Arial, sans-serif">
+    <tspan x="1140" dy="0">Machine routes must match</tspan>
+    <tspan x="1140" dy="28">the visible feed structure.</tspan>
+  </text>
   <rect x="92" y="620" width="936" height="296" rx="28" fill="white" stroke="#E7E0EB" stroke-width="2"/>
   <text x="128" y="682" fill="#180018" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="800">Top recommendation</text>
   <text x="128" y="742" fill="#180018" font-size="22" font-family="Manrope, Arial, sans-serif">Blend current task, proof, and next action into one card.</text>
