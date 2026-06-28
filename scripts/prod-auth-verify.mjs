@@ -56,15 +56,37 @@ async function readAuthedJson(page, route) {
   return payload.json;
 }
 
-async function waitForAuthedState(page) {
-  await page.waitForFunction(
-    () => {
-      const logout = document.querySelector('form[action="/auth/signout"] button');
-      const composer = document.querySelector('select');
-      return Boolean(logout || composer);
-    },
-    { timeout: 480000 }
-  );
+function isOpenPage(page) {
+  try {
+    return !page.isClosed();
+  } catch {
+    return false;
+  }
+}
+
+async function waitForAuthedState(context) {
+  const deadline = Date.now() + 480000;
+
+  while (Date.now() < deadline) {
+    for (const page of context.pages()) {
+      if (!isOpenPage(page)) continue;
+      const authed = await page
+        .evaluate(() => {
+          const logout = document.querySelector('form[action="/auth/signout"] button');
+          const composer = document.querySelector("select");
+          return Boolean(logout || composer);
+        })
+        .catch(() => false);
+
+      if (authed) {
+        return page;
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
+  throw new Error("Timed out waiting for the signed-in production session.");
 }
 
 async function screenshot(page, viewport, label) {
@@ -73,12 +95,12 @@ async function screenshot(page, viewport, label) {
   return filePath;
 }
 
-async function ensureLoggedIn(page) {
+async function ensureLoggedIn(context, page) {
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 120000 });
   const loginButton = page.getByRole("button", { name: /continue with google/i });
   if (await loginButton.isVisible().catch(() => false)) {
     await loginButton.click();
-    await waitForAuthedState(page);
+    page = await waitForAuthedState(context);
   }
 
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 120000 });
@@ -86,6 +108,7 @@ async function ensureLoggedIn(page) {
   assert(await logoutButton.isVisible().catch(() => false), "Signed-in state was not established after manual Google login.");
   await page.reload({ waitUntil: "networkidle", timeout: 120000 });
   assert(await logoutButton.isVisible().catch(() => false), "Session did not survive reload.");
+  return page;
 }
 
 async function verifyFollowFlow(page, agentHandle, initialFollowing) {
@@ -260,9 +283,9 @@ page.on("requestfailed", (request) => {
 let results;
 
 try {
-  await ensureLoggedIn(page);
+  const authedPage = await ensureLoggedIn(browser, page);
 
-  const feed = await readAuthedJson(page, "/api/feed");
+  const feed = await readAuthedJson(authedPage, "/api/feed");
   assert(feed.dataSource === "supabase", "Authenticated production feed is not reading from Supabase.");
   assert(feed.warning == null, "Authenticated production feed returned a warning.");
   assert(Array.isArray(feed.ownedAgents) && feed.ownedAgents.length > 0, "Signed-in user does not own any agents.");
@@ -273,13 +296,13 @@ try {
   const mutablePost = feed.posts.find((post) => !post.author.ownedByViewer) || feed.posts[0];
   assert(mutablePost, "No post is available for mutation verification.");
 
-  await verifyFollowFlow(page, mutableAgent.handle, Boolean(mutableAgent.isFollowing));
-  await verifyReactionFlow(page, mutablePost.id, "repost", Boolean(mutablePost.viewer.reposted));
-  await verifyReactionFlow(page, mutablePost.id, "like", Boolean(mutablePost.viewer.liked));
-  await verifyReplyFlow(page, mutablePost.id);
-  await verifyShareFlow(page, mutablePost.id);
-  const createdPost = await verifyPostCreationAndMedia(page);
-  await captureSignedInScreenshots(page, mutablePost.id);
+  await verifyFollowFlow(authedPage, mutableAgent.handle, Boolean(mutableAgent.isFollowing));
+  await verifyReactionFlow(authedPage, mutablePost.id, "repost", Boolean(mutablePost.viewer.reposted));
+  await verifyReactionFlow(authedPage, mutablePost.id, "like", Boolean(mutablePost.viewer.liked));
+  await verifyReplyFlow(authedPage, mutablePost.id);
+  await verifyShareFlow(authedPage, mutablePost.id);
+  const createdPost = await verifyPostCreationAndMedia(authedPage);
+  await captureSignedInScreenshots(authedPage, mutablePost.id);
 
   results = {
     ok: true,
