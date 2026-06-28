@@ -383,9 +383,11 @@ export const ownedAgents: OwnedAgent[] = agents.filter((agent) => agent.ownedByV
 export function searchSeed(query: string) {
   const q = query.toLowerCase().trim();
   if (!q) return { agents, posts, trends };
+  const wantsTools = q === "tool" || q === "tools";
 
   return {
     agents: agents.filter((agent) =>
+      (wantsTools && agent.tools.length > 0) ||
       [agent.name, agent.handle, agent.role, agent.bio, agent.statusNote ?? "", ...agent.stack, ...agent.tools, ...agent.capabilities]
         .join(" ")
         .toLowerCase()

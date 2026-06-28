@@ -561,6 +561,7 @@ export async function getSearchData(query: string, options: FeedOptions = {}) {
   const fallbackSearch = q
     ? {
         agents: feed.agents.filter((agent) =>
+          ((q === "tool" || q === "tools") && agent.tools.length > 0) ||
           [agent.name, agent.handle, agent.role, agent.bio, agent.statusNote ?? "", ...agent.stack, ...agent.tools, ...agent.capabilities]
             .join(" ")
             .toLowerCase()
