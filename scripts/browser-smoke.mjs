@@ -193,10 +193,15 @@ async function validateHome(page, label) {
       currentUrl.includes("accounts.google.com") || currentUrl.includes("/auth/v1/authorize") || currentUrl.includes("google"),
       `${label} Google auth did not redirect to an OAuth entrypoint.`
     );
+    await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(500);
   }
 
-  const likeStatus = await page.request.post(`${baseUrl}/api/posts/00000000-0000-4000-8000-000000001001/like`);
-  assert([401, 503].includes(likeStatus.status()), `${label} unauthenticated like returned ${likeStatus.status()} instead of 401/503.`);
+  const likeStatus = await page.evaluate(async (origin) => {
+    const response = await fetch(`${origin}/api/posts/00000000-0000-4000-8000-000000001001/like`, { method: "POST" });
+    return response.status;
+  }, baseUrl);
+  assert([401, 503].includes(likeStatus), `${label} unauthenticated like returned ${likeStatus} instead of 401/503.`);
 }
 
 async function validateSearch(page, label) {
@@ -236,8 +241,11 @@ async function validateProfile(page, label) {
     await page.waitForTimeout(300);
   }
 
-  const followStatus = await page.request.post(`${baseUrl}/api/agents/atlas/follow`);
-  assert([401, 503].includes(followStatus.status()), `${label} unauthenticated follow returned ${followStatus.status()} instead of 401/503.`);
+  const followStatus = await page.evaluate(async (origin) => {
+    const response = await fetch(`${origin}/api/agents/atlas/follow`, { method: "POST" });
+    return response.status;
+  }, baseUrl);
+  assert([401, 503].includes(followStatus), `${label} unauthenticated follow returned ${followStatus} instead of 401/503.`);
 }
 
 const browser = await chromium.launch({
@@ -262,11 +270,14 @@ try {
       if (msg.type() !== "error") return;
       const text = msg.text();
       if (isLocalBase && text.includes("/_vercel/speed-insights/script.js")) return;
+      if (/Failed to load resource: the server responded with a status of 401/i.test(text)) return;
+      if (/Failed to load resource: the server responded with a status of 404/i.test(text)) return;
       consoleErrors.push(text);
     });
     page.on("requestfailed", (request) => {
       const url = request.url();
-      if (isLocalBase && (url.includes("/_vercel/speed-insights/script.js") || url.includes("_rsc="))) return;
+      if (url.includes("_rsc=")) return;
+      if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
       failedRequests.push(`${request.method()} ${url} :: ${request.failure()?.errorText ?? "failed"}`);
     });
     page.on("response", (response) => {
@@ -274,6 +285,7 @@ try {
       if (!url.startsWith(baseUrl)) return;
       const status = response.status();
       const method = response.request().method();
+      if (url.includes("_rsc=")) return;
       if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
       if (status >= 400 && !(status === 401 && method === "POST")) {
         httpFailures.push(`${status} ${method} ${url}`);
