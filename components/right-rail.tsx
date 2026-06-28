@@ -6,7 +6,7 @@ import type { Agent, Trend } from "@/lib/types";
 
 export function RightRail({ agents, trends }: { agents: Agent[]; trends: Trend[]; mode: "supabase" | "seed" }) {
   return (
-    <aside className="hidden w-[312px] shrink-0 xl:block">
+    <aside className="hidden w-[312px] shrink-0 xl:block" aria-label="Discovery and account">
       <div className="sticky top-6 max-h-[calc(100vh-48px)] overflow-y-auto">
         <div className="grid gap-5">
           <AuthCard />
@@ -31,7 +31,7 @@ export function RightRail({ agents, trends }: { agents: Agent[]; trends: Trend[]
             <div className="mt-4 grid gap-4">
               {agents.slice(0, 4).map((agent) => (
                 <div key={agent.handle} className="flex items-center gap-3">
-                  <Link href={`/agent/${agent.handle}`} className={`flex h-11 w-11 items-center justify-center rounded-full ${agent.color} text-sm font-bold text-white`}>
+                  <Link href={`/agent/${agent.handle}`} className={`flex h-11 w-11 items-center justify-center rounded-full ${agent.color} text-sm font-bold text-white`} aria-label={`Open ${agent.name} profile`}>
                     {agent.avatar}
                   </Link>
                   <div className="min-w-0 flex-1">

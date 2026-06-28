@@ -34,6 +34,8 @@ export function ShareLinkButton({ urlPath, title, text, className }: ShareLinkBu
     <button
       type="button"
       onClick={share}
+      aria-live="polite"
+      aria-label={copied ? "Profile link copied" : "Share profile"}
       className={
         className ??
         "inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--violet-300)]"

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext, ensureAllowedOrigin, jsonWithRequestContext, logServerEvent } from "@/lib/request";
 import { createMediaUploadUrl, getR2Status } from "@/lib/r2";
 import { getCurrentUser } from "@/lib/session";
 import { createClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
@@ -21,21 +22,27 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const context = createRequestContext(request, "presign-media");
   const status = getR2Status();
   if (!status.configured) {
-    return NextResponse.json(
+    return jsonWithRequestContext(
       {
         error: "R2 storage is not configured.",
         bucket: status.bucket,
         missing: status.missing
       },
+      context,
       { status: 503 }
     );
   }
 
+  if (!ensureAllowedOrigin(request)) {
+    return jsonWithRequestContext({ error: "Origin is not allowed." }, context, { status: 403 });
+  }
+
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Sign in with Google before uploading media." }, { status: 401 });
+    return jsonWithRequestContext({ error: "Sign in with Google before uploading media." }, context, { status: 401 });
   }
 
   const body = (await request.json()) as {
@@ -49,10 +56,10 @@ export async function POST(request: NextRequest) {
   const mimeType = body.mimeType ?? "";
   const sizeBytes = Number(body.sizeBytes ?? 0);
   if (!SAFE_MIME_PREFIXES.some((prefix) => mimeType.startsWith(prefix))) {
-    return NextResponse.json({ error: "Unsupported media type." }, { status: 400 });
+    return jsonWithRequestContext({ error: "Unsupported media type." }, context, { status: 400 });
   }
   if (!Number.isFinite(sizeBytes) || sizeBytes <= 0 || sizeBytes > MAX_UPLOAD_BYTES) {
-    return NextResponse.json({ error: "Upload size must be between 1 byte and 25 MB." }, { status: 400 });
+    return jsonWithRequestContext({ error: "Upload size must be between 1 byte and 25 MB." }, context, { status: 400 });
   }
 
   const fileName = cleanFileName(body.fileName ?? "upload");
@@ -64,10 +71,10 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
     if (!profile) {
-      return NextResponse.json({ error: "Signed-in user profile is not ready. Try signing out and signing in again." }, { status: 409 });
+      return jsonWithRequestContext({ error: "Signed-in user profile is not ready. Try signing out and signing in again." }, context, { status: 409 });
     }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("media_assets")
       .insert({
         bucket: upload.bucket,
@@ -83,11 +90,19 @@ export async function POST(request: NextRequest) {
       .select("id")
       .single();
 
+    if (error) {
+      logServerEvent("warn", context, "media metadata insert failed", { error: error.message });
+      return jsonWithRequestContext({ error: "Media metadata could not be stored." }, context, { status: 400 });
+    }
+
     mediaAssetId = data?.id ?? null;
   }
 
-  return NextResponse.json({
-    ...upload,
-    mediaAssetId
-  });
+  return jsonWithRequestContext(
+    {
+      ...upload,
+      mediaAssetId
+    },
+    context
+  );
 }

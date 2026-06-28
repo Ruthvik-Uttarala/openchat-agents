@@ -1,5 +1,6 @@
 import { revalidatePath, revalidateTag } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext, ensureAllowedOrigin, jsonWithRequestContext, logServerEvent } from "@/lib/request";
 import { getViewerProfile } from "@/lib/session";
 import { createClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
@@ -13,14 +14,20 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function POST(_: Request, { params }: RouteContext) {
+export async function POST(request: NextRequest, { params }: RouteContext) {
+  const context = createRequestContext(request, "repost-post");
+
   if (!hasSupabaseServerConfig) {
-    return NextResponse.json({ error: "Reposts require Supabase configuration." }, { status: 503 });
+    return jsonWithRequestContext({ error: "Reposts require Supabase configuration." }, context, { status: 503 });
+  }
+
+  if (!ensureAllowedOrigin(request)) {
+    return jsonWithRequestContext({ error: "Origin is not allowed." }, context, { status: 403 });
   }
 
   const viewer = await getViewerProfile();
   if (!viewer) {
-    return NextResponse.json({ error: "Sign in before reposting." }, { status: 401 });
+    return jsonWithRequestContext({ error: "Sign in before reposting." }, context, { status: 401 });
   }
 
   const { id } = await params;
@@ -32,7 +39,8 @@ export async function POST(_: Request, { params }: RouteContext) {
   });
 
   if (error && !error.message.toLowerCase().includes("duplicate")) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    logServerEvent("warn", context, "repost failed", { postId: id, error: error.message });
+    return jsonWithRequestContext({ error: error.message }, context, { status: 400 });
   }
 
   const post = await getPostMeta(id);
@@ -42,24 +50,31 @@ export async function POST(_: Request, { params }: RouteContext) {
   revalidatePath("/");
   if (author?.handle) revalidatePath(`/agent/${author.handle}`);
 
-  return NextResponse.json({ ok: true });
+  return jsonWithRequestContext({ ok: true }, context);
 }
 
-export async function DELETE(_: Request, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
+  const context = createRequestContext(request, "unrepost-post");
+
   if (!hasSupabaseServerConfig) {
-    return NextResponse.json({ error: "Reposts require Supabase configuration." }, { status: 503 });
+    return jsonWithRequestContext({ error: "Reposts require Supabase configuration." }, context, { status: 503 });
+  }
+
+  if (!ensureAllowedOrigin(request)) {
+    return jsonWithRequestContext({ error: "Origin is not allowed." }, context, { status: 403 });
   }
 
   const viewer = await getViewerProfile();
   if (!viewer) {
-    return NextResponse.json({ error: "Sign in before reposting." }, { status: 401 });
+    return jsonWithRequestContext({ error: "Sign in before reposting." }, context, { status: 401 });
   }
 
   const { id } = await params;
   const supabase = await createClient();
   const { error } = await supabase.from("reactions").delete().eq("post_id", id).eq("profile_id", viewer.profileId).eq("reaction_type", "repost");
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    logServerEvent("warn", context, "unrepost failed", { postId: id, error: error.message });
+    return jsonWithRequestContext({ error: error.message }, context, { status: 400 });
   }
 
   const post = await getPostMeta(id);
@@ -69,5 +84,5 @@ export async function DELETE(_: Request, { params }: RouteContext) {
   revalidatePath("/");
   if (author?.handle) revalidatePath(`/agent/${author.handle}`);
 
-  return NextResponse.json({ ok: true });
+  return jsonWithRequestContext({ ok: true }, context);
 }

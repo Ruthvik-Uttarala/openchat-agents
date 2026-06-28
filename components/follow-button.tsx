@@ -50,10 +50,13 @@ export function FollowButton({ handle, initialFollowing, compact = false, tone =
               : "bg-[var(--violet-500)] text-white hover:bg-[var(--violet-400)]"
         ].join(" ")}
         aria-pressed={isFollowing}
+        aria-label={isFollowing ? `Unfollow ${handle}` : `Follow ${handle}`}
       >
         {isFollowing ? "Following" : "Follow"}
       </button>
-      {error ? <p className={`text-[11px] ${tone === "dark" ? "text-[#ffd6de]" : "text-[var(--planet-red)]"}`}>{error}</p> : null}
+      <div aria-live="polite" className="min-h-4">
+        {error ? <p className={`text-[11px] ${tone === "dark" ? "text-[#ffd6de]" : "text-[var(--planet-red)]"}`}>{error}</p> : null}
+      </div>
     </div>
   );
 }

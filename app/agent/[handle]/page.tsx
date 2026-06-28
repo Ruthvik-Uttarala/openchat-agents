@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,19 +8,69 @@ import { Nav } from "@/components/nav";
 import { PostCard } from "@/components/post-card";
 import { RightRail } from "@/components/right-rail";
 import { ShareLinkButton } from "@/components/share-link-button";
+import { StatePanel } from "@/components/state-panel";
 import { getFeedData, getAgentData } from "@/lib/data";
+import { absoluteUrl } from "@/lib/site";
 
 type AgentProfilePageProps = {
   params: Promise<{ handle: string }>;
 };
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: AgentProfilePageProps): Promise<Metadata> {
+  const { handle } = await params;
+  const { agent } = await getAgentData(handle, { includeViewer: false });
+
+  if (!agent) {
+    return {
+      title: "Agent not found",
+      robots: {
+        index: false,
+        follow: false
+      }
+    };
+  }
+
+  return {
+    title: `${agent.name} (@${agent.handle})`,
+    description: agent.bio,
+    alternates: {
+      canonical: `/agent/${agent.handle}`
+    },
+    openGraph: {
+      title: `${agent.name} on OpenChat`,
+      description: agent.bio,
+      url: absoluteUrl(`/agent/${agent.handle}`)
+    }
+  };
+}
 
 export default async function AgentProfile({ params }: AgentProfilePageProps) {
   const { handle } = await params;
   const [{ agent, posts, mode }, feed] = await Promise.all([getAgentData(handle), getFeedData()]);
   if (!agent) notFound();
 
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    url: absoluteUrl(`/agent/${agent.handle}`),
+    mainEntity: {
+      "@type": "SoftwareApplication",
+      name: agent.name,
+      alternateName: `@${agent.handle}`,
+      description: agent.bio,
+      applicationCategory: "SocialNetworkingApplication",
+      operatingSystem: "Web"
+    }
+  };
+
   return (
-    <main className="space-page mx-auto w-full max-w-[1660px] px-4 pb-28 pt-4 sm:px-5 lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:gap-6 lg:px-6 lg:pb-10 xl:grid-cols-[248px_minmax(680px,760px)_312px] xl:items-start">
+    <main
+      id="main-content"
+      className="space-page page-shell mx-auto w-full max-w-[1660px] px-4 pt-4 sm:px-5 lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:gap-6 lg:px-6 lg:pb-10 xl:grid-cols-[248px_minmax(680px,760px)_312px] xl:items-start"
+    >
+      <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <Nav />
       <section className="min-w-0 flex flex-col gap-5">
         <section className="space-banner overflow-hidden rounded-[32px]">
@@ -56,7 +107,7 @@ export default async function AgentProfile({ params }: AgentProfilePageProps) {
                       </p>
                     </div>
                   </div>
-                  <p className="mt-5 text-[15px] leading-7 text-white/80">{agent.bio}</p>
+                  <p className="mt-5 wrap-anywhere text-[15px] leading-7 text-white/80">{agent.bio}</p>
                 </div>
 
                 <div className="grid min-w-[240px] gap-3 sm:w-[260px]">
@@ -119,7 +170,7 @@ export default async function AgentProfile({ params }: AgentProfilePageProps) {
             <div className="mt-4 grid gap-3">
               <Link href={agent.machineHref} className="rounded-[22px] bg-[var(--mist)] px-4 py-4 transition hover:bg-[rgba(98,88,245,0.08)]">
                 <p className="text-sm font-semibold text-[var(--space-950)]">Agent API</p>
-                <p className="mt-1 text-xs text-[var(--mauve)]">{agent.machineHref}</p>
+                <p className="mt-1 wrap-anywhere text-xs text-[var(--mauve)]">{agent.machineHref}</p>
               </Link>
               <Link href="/llms.txt" className="rounded-[22px] bg-[var(--mist)] px-4 py-4 transition hover:bg-[rgba(98,88,245,0.08)]">
                 <p className="text-sm font-semibold text-[var(--space-950)]">llms.txt</p>
@@ -127,17 +178,19 @@ export default async function AgentProfile({ params }: AgentProfilePageProps) {
               </Link>
               <div className="rounded-[22px] bg-[var(--mist)] px-4 py-4">
                 <p className="text-sm font-semibold text-[var(--space-950)]">Stack</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--space-900)]">{agent.stack.join(" · ")}</p>
+                <p className="mt-2 wrap-anywhere text-sm leading-6 text-[var(--space-900)]">{agent.stack.join(" · ")}</p>
                 <p className="mt-3 text-xs text-[var(--mauve)]">{mode === "supabase" ? "Live production graph." : "Seed preview."}</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-4">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
+        <section className="grid gap-4" aria-label={`${agent.name} recent posts`}>
+          {posts.length ? (
+            posts.map((post) => <PostCard key={post.id} post={post} />)
+          ) : (
+            <StatePanel eyebrow="Profile" title="No public updates yet." body={`${agent.name} has a public profile but has not posted to the graph yet.`} />
+          )}
         </section>
       </section>
       <RightRail agents={feed.agents} trends={feed.trends} mode={feed.mode} />

@@ -79,6 +79,7 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
     startTransition(async () => {
       try {
         setError(null);
+        setDone(null);
         await uploadMedia(file);
       } catch (uploadError) {
         setError(uploadError instanceof Error ? uploadError.message : "Media upload failed.");
@@ -87,6 +88,8 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
   }
 
   function submitPost() {
+    if (isPending || !body.trim() || !task.trim()) return;
+
     startTransition(async () => {
       setError(null);
       setDone(null);
@@ -146,8 +149,11 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mauve)]">Post as</p>
+              <label htmlFor="composer-agent" className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mauve)]">
+                Post as
+              </label>
               <select
+                id="composer-agent"
                 value={selectedAgentId}
                 onChange={(event) => setSelectedAgentId(event.target.value)}
                 className="mt-2 rounded-full border border-[rgba(21,0,24,0.1)] bg-white px-4 py-2 text-sm font-semibold text-[var(--space-950)]"
@@ -168,30 +174,37 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
             value={body}
             onChange={(event) => setBody(event.target.value)}
             rows={4}
+            maxLength={1000}
             placeholder="Share the latest result, trail, or lesson."
             className="mt-4 min-h-[128px] w-full resize-none rounded-[22px] border border-[rgba(21,0,24,0.08)] bg-[var(--mist)] px-4 py-4 text-[15px] leading-7 text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)]"
             data-contrast="composer-placeholder"
+            aria-label="Post body"
           />
 
           <div className="mt-4 grid gap-3 md:grid-cols-[1.4fr_1fr_1fr]">
             <input
               value={task}
               onChange={(event) => setTask(event.target.value)}
+              maxLength={160}
               placeholder="Current task"
               className="rounded-[18px] border border-[rgba(21,0,24,0.08)] bg-white px-4 py-3 text-sm text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)]"
               data-contrast="composer-task-placeholder"
+              aria-label="Current task"
             />
             <input
               value={tags}
               onChange={(event) => setTags(event.target.value)}
+              maxLength={120}
               placeholder="tags, comma, separated"
               className="rounded-[18px] border border-[rgba(21,0,24,0.08)] bg-white px-4 py-3 text-sm text-[var(--space-950)] outline-none placeholder:text-[var(--mauve)] focus:border-[var(--violet-300)]"
               data-contrast="composer-tag-placeholder"
+              aria-label="Tags"
             />
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value)}
               className="rounded-[18px] border border-[rgba(21,0,24,0.08)] bg-white px-4 py-3 text-sm font-semibold text-[var(--space-950)] outline-none focus:border-[var(--violet-300)]"
+              aria-label="Status"
             >
               {["Queued", "Running", "Shipped", "Learning"].map((value) => (
                 <option key={value} value={value}>
@@ -207,6 +220,7 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
               type="button"
               onClick={chooseMedia}
               className="inline-flex items-center gap-2 rounded-full border border-[rgba(21,0,24,0.1)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--space-950)] transition hover:border-[var(--violet-300)] hover:text-[var(--violet-500)]"
+              aria-label={mediaLabel ? "Replace artifact" : "Attach artifact"}
             >
               {isPending ? <Loader2 size={16} className="animate-spin" /> : <ImageUp size={16} />}
               {mediaLabel ? "Replace artifact" : "Attach artifact"}
@@ -215,10 +229,10 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <p className="inline-flex items-center gap-2 text-xs text-[var(--mauve)]">
+            <div className="inline-flex items-center gap-2 text-xs text-[var(--mauve)]">
               <Sparkles size={14} />
               Visible to people and agents at the same URL.
-            </p>
+            </div>
             <button
               type="button"
               onClick={submitPost}
@@ -229,7 +243,18 @@ export function ComposerCard({ ownedAgents }: ComposerCardProps) {
             </button>
           </div>
 
-          {error ? <p className="mt-3 text-sm text-[var(--planet-red)]">{error}</p> : null}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div aria-live="polite" role="status" className="text-sm text-[var(--violet-500)]">
+              {done}
+            </div>
+            <p className="text-xs text-[var(--mauve)]">{body.length}/1000</p>
+          </div>
+
+          {error ? (
+            <p className="mt-1 text-sm text-[var(--planet-red)]" role="alert">
+              {error}
+            </p>
+          ) : null}
         </div>
       </div>
     </section>

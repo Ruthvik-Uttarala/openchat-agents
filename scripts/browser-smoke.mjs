@@ -1,9 +1,9 @@
-import { chromium } from "playwright-core";
+import AxeBuilder from "@axe-core/playwright";
+import { chromium, firefox } from "playwright-core";
 import fs from "node:fs";
 import path from "node:path";
 
 const baseUrl = (process.env.BASE_URL || "http://127.0.0.1:3000").replace(/\/+$/, "");
-const executablePath = process.env.CHROME_EXECUTABLE_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const isLocalBase = /127\.0\.0\.1|localhost/.test(baseUrl);
 const artifactDir = path.join(process.cwd(), "tmp", "browser-smoke");
 fs.mkdirSync(artifactDir, { recursive: true });
@@ -20,12 +20,25 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function screenshotPath(viewport, route) {
-  return path.join(artifactDir, `${viewport}-${route}.png`);
+function existingTarget(name, engine, executablePath) {
+  if (!executablePath || !fs.existsSync(executablePath)) return null;
+  return { name, engine, executablePath };
 }
 
-async function captureFullPage(page, viewport, route) {
-  const filePath = screenshotPath(viewport, route);
+const browserTargets = [
+  existingTarget("chrome", chromium, process.env.CHROME_EXECUTABLE_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe"),
+  existingTarget("edge", chromium, process.env.EDGE_EXECUTABLE_PATH || "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
+  existingTarget("firefox", firefox, process.env.FIREFOX_EXECUTABLE_PATH || "C:/Program Files/Mozilla Firefox/firefox.exe")
+].filter(Boolean);
+
+assert(browserTargets.length > 0, "No supported browser executables were found.");
+
+function screenshotPath(browserName, viewport, route) {
+  return path.join(artifactDir, `${browserName}-${viewport}-${route}.png`);
+}
+
+async function captureFullPage(page, browserName, viewport, route) {
+  const filePath = screenshotPath(browserName, viewport, route);
   await page.screenshot({ path: filePath, fullPage: true, animations: "disabled" });
   return filePath;
 }
@@ -119,10 +132,7 @@ async function measureContrast(locator, label, { min = 4.5, pseudo = null } = {}
         if (!input) return null;
         const match = input.match(/rgba?\(([^)]+)\)/i);
         if (!match) return null;
-        const parts = match[1]
-          .split(",")
-          .map((part) => part.trim())
-          .map((part, index) => (index < 3 ? Number(part) : Number(part)));
+        const parts = match[1].split(",").map((part) => part.trim()).map((part, index) => (index < 3 ? Number(part) : Number(part)));
         if (parts.length < 3 || parts.some((part, index) => index < 3 && Number.isNaN(part))) return null;
         return [parts[0], parts[1], parts[2], parts.length >= 4 && !Number.isNaN(parts[3]) ? parts[3] : 1];
       }
@@ -154,17 +164,14 @@ async function measureContrast(locator, label, { min = 4.5, pseudo = null } = {}
       }
 
       function resolvedBackground(node) {
-        const surfaceRoot =
-          node.closest("button, a, input, textarea, article, .space-window, .space-hero, .space-banner, .space-rail") || node;
+        const surfaceRoot = node.closest("button, a, input, textarea, article, .space-window, .space-hero, .space-banner, .space-rail") || node;
         let current = surfaceRoot;
         const layers = [];
 
         while (current) {
           const style = getComputedStyle(current);
           const parsed = parseColor(style.backgroundColor);
-          if (parsed && parsed[3] > 0) {
-            layers.push(parsed);
-          }
+          if (parsed && parsed[3] > 0) layers.push(parsed);
           current = current.parentElement;
         }
 
@@ -191,11 +198,7 @@ async function measureContrast(locator, label, { min = 4.5, pseudo = null } = {}
   );
 
   assert(result, `${label} contrast could not be measured.`);
-  assert(
-    result.ratio >= min,
-    `${label} contrast is ${result.ratio.toFixed(2)}:1, below the required ${min.toFixed(1)}:1.`
-  );
-
+  assert(result.ratio >= min, `${label} contrast is ${result.ratio.toFixed(2)}:1, below the required ${min.toFixed(1)}:1.`);
   return result;
 }
 
@@ -241,40 +244,58 @@ async function validateKeyboardFocus(page, label) {
   );
 }
 
-async function validateHome(page, viewportName) {
+async function validateAccessibility(page, label) {
+  const skipLinkCount = await page.locator('a[href="#main-content"]').count();
+  assert(skipLinkCount > 0, `${label} is missing a skip link.`);
+  assert((await page.locator("main#main-content").count()) > 0, `${label} is missing the main landmark.`);
+  assert((await page.locator("nav").count()) > 0, `${label} is missing navigation landmarks.`);
+
+  const results = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
+  const actionable = results.violations.filter((violation) => violation.impact !== "minor");
+
+  assert(
+    actionable.length === 0,
+    `${label} has accessibility violations: ${actionable
+      .map((violation) => `${violation.id} (${violation.nodes.length})`)
+      .join(", ")}`
+  );
+}
+
+async function validateHome(page, browserName, viewportName) {
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
   await page.waitForTimeout(400);
-  await captureFullPage(page, viewportName, "home");
-  await validateNoOverflow(page, `${viewportName} home`);
-  await validateLayering(page, `${viewportName} home`);
+  await captureFullPage(page, browserName, viewportName, "home");
+  await validateNoOverflow(page, `${browserName}/${viewportName} home`);
+  await validateLayering(page, `${browserName}/${viewportName} home`);
+  await validateAccessibility(page, `${browserName}/${viewportName} home`);
 
   const hero = page.locator(".space-hero").first();
-  await validateSurfaceTone(page, hero, `${viewportName} home hero`, "dark");
-  await measureContrast(page.locator('[data-contrast="hero-paragraph"]').first(), `${viewportName} hero paragraph`);
-  await measureContrast(page.locator('[data-contrast="hero-stat-label"]').first(), `${viewportName} hero stat label`);
-  await measureContrast(page.getByRole("link", { name: /search the graph/i }).first(), `${viewportName} hero action`, { min: 3 });
+  await validateSurfaceTone(page, hero, `${browserName}-${viewportName}-home-hero`, "dark");
+  await measureContrast(page.locator('[data-contrast="hero-paragraph"]').first(), `${browserName}/${viewportName} hero paragraph`);
+  await measureContrast(page.locator('[data-contrast="hero-stat-label"]').first(), `${browserName}/${viewportName} hero stat label`);
+  await measureContrast(page.getByRole("link", { name: /search the graph/i }).first(), `${browserName}/${viewportName} hero action`, { min: 3 });
 
   const firstPost = page.locator("article").first();
   await firstPost.scrollIntoViewIfNeeded();
   await page.waitForTimeout(200);
-  await validateSurfaceTone(page, firstPost, `${viewportName} first post`, "light");
-  await measureContrast(firstPost.locator('[data-contrast="post-text"]').first(), `${viewportName} post text`);
-  await measureContrast(firstPost.locator('[data-contrast="post-metadata"]').first(), `${viewportName} post metadata`);
-  await measureContrast(firstPost.locator('[data-contrast="post-tag"]').first(), `${viewportName} post tag`, { min: 3 });
-  await measureContrast(firstPost.locator('[data-contrast="reply-placeholder"]').first(), `${viewportName} reply placeholder`, {
+  await validateSurfaceTone(page, firstPost, `${browserName}-${viewportName}-first-post`, "light");
+  await measureContrast(firstPost.locator('[data-contrast="post-text"]').first(), `${browserName}/${viewportName} post text`);
+  await measureContrast(firstPost.locator('[data-contrast="post-metadata"]').first(), `${browserName}/${viewportName} post metadata`);
+  await measureContrast(firstPost.locator('[data-contrast="post-tag"]').first(), `${browserName}/${viewportName} post tag`, { min: 3 });
+  await measureContrast(firstPost.locator('[data-contrast="reply-placeholder"]').first(), `${browserName}/${viewportName} reply placeholder`, {
     pseudo: "::placeholder"
   });
-  await measureContrast(firstPost.locator('[data-contrast="action-button"]').first(), `${viewportName} share button`, { min: 3 });
-  assert((await firstPost.locator("img").count()) > 0, `${viewportName} first post is missing its media artifact.`);
-  assert((await firstPost.getByText(/Input|Output|Citations|Route map|Observed pattern/i).count()) > 0, `${viewportName} first post is missing structured content blocks.`);
+  await measureContrast(firstPost.locator('[data-contrast="action-button"]').first(), `${browserName}/${viewportName} share button`, { min: 3 });
+  assert((await firstPost.locator("img").count()) > 0, `${browserName}/${viewportName} first post is missing its media artifact.`);
+  assert((await firstPost.getByText(/Input|Output|Citations|Route map|Observed pattern/i).count()) > 0, `${browserName}/${viewportName} first post is missing structured content blocks.`);
 
   const showThread = firstPost.getByRole("button", { name: /show thread|hide thread/i }).first();
   if (await showThread.isVisible().catch(() => false)) {
     await showThread.click();
     await page.waitForTimeout(250);
   }
-  await captureFullPage(page, viewportName, "thread");
-  await validateKeyboardFocus(page, `${viewportName} home`);
+  await captureFullPage(page, browserName, viewportName, "thread");
+  await validateKeyboardFocus(page, `${browserName}/${viewportName} home`);
 
   const authButton = page.getByRole("button", { name: /continue with google/i });
   if (["desktop", "wide-desktop"].includes(viewportName) && (await authButton.isVisible().catch(() => false))) {
@@ -283,10 +304,10 @@ async function validateHome(page, viewportName) {
     const currentUrl = page.url();
     const authError = await page.getByText(/add supabase env vars/i).isVisible().catch(() => false);
     if (!(authError && isLocalBase)) {
-      assert(!authError, `${viewportName} Google auth is not configured.`);
+      assert(!authError, `${browserName}/${viewportName} Google auth is not configured.`);
       assert(
         currentUrl.includes("accounts.google.com") || currentUrl.includes("/auth/v1/authorize") || currentUrl.includes("google"),
-        `${viewportName} Google auth did not redirect to an OAuth entrypoint.`
+        `${browserName}/${viewportName} Google auth did not redirect to an OAuth entrypoint.`
       );
     }
     await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
@@ -297,54 +318,54 @@ async function validateHome(page, viewportName) {
     const response = await fetch(`${origin}/api/posts/00000000-0000-4000-8000-000000001001/like`, { method: "POST" });
     return response.status;
   }, baseUrl);
-  assert([401, 503].includes(likeStatus), `${viewportName} unauthenticated like returned ${likeStatus} instead of 401/503.`);
+  assert([401, 403, 503].includes(likeStatus), `${browserName}/${viewportName} unauthenticated like returned ${likeStatus} instead of 401/403/503.`);
 }
 
-async function validateSearch(page, viewportName) {
+async function validateSearch(page, browserName, viewportName) {
   await page.goto(`${baseUrl}/search?q=tool`, { waitUntil: "networkidle" });
   await page.waitForTimeout(400);
-  await captureFullPage(page, viewportName, "search");
-  await validateNoOverflow(page, `${viewportName} search`);
-  await validateLayering(page, `${viewportName} search`);
+  await captureFullPage(page, browserName, viewportName, "search");
+  await validateNoOverflow(page, `${browserName}/${viewportName} search`);
+  await validateLayering(page, `${browserName}/${viewportName} search`);
+  await validateAccessibility(page, `${browserName}/${viewportName} search`);
 
   const banner = page.locator(".space-banner").first();
-  await validateSurfaceTone(page, banner, `${viewportName} search banner`, "dark");
-  await measureContrast(page.locator('[data-contrast="search-placeholder"]').first(), `${viewportName} search placeholder`, {
+  await validateSurfaceTone(page, banner, `${browserName}-${viewportName}-search-banner`, "dark");
+  await measureContrast(page.locator('[data-contrast="search-placeholder"]').first(), `${browserName}/${viewportName} search placeholder`, {
     pseudo: "::placeholder"
   });
 
   const searchControls = page.locator("form").first();
-  await validateSurfaceTone(page, searchControls, `${viewportName} search controls`, "light");
+  await validateSurfaceTone(page, searchControls, `${browserName}-${viewportName}-search-controls`, "light");
 
   const resultsPanel = page.locator("section").filter({ hasText: 'Results for "tool"' }).first();
   const searchAgentCards = await resultsPanel.locator('a[href^="/agent/"]').count();
-  assert(searchAgentCards > 0, `${viewportName} search query "tool" returned no agent cards.`);
-  await measureContrast(resultsPanel.locator('a[href^="/agent/"]').first(), `${viewportName} search result title`);
-  await measureContrast(resultsPanel.locator("p").nth(2), `${viewportName} search result body`);
+  assert(searchAgentCards > 0, `${browserName}/${viewportName} search query "tool" returned no agent cards.`);
+  await measureContrast(resultsPanel.locator('a[href^="/agent/"]').first(), `${browserName}/${viewportName} search result title`);
+  await measureContrast(resultsPanel.locator("p").nth(2), `${browserName}/${viewportName} search result body`);
   const rightRailSecondary = page.locator('[data-contrast="right-rail-secondary"]').first();
   if ((await rightRailSecondary.count()) > 0 && (await rightRailSecondary.isVisible().catch(() => false))) {
-    await measureContrast(rightRailSecondary, `${viewportName} right rail secondary`);
+    await measureContrast(rightRailSecondary, `${browserName}/${viewportName} right rail secondary`);
   }
 }
 
-async function validateProfile(page, viewportName) {
+async function validateProfile(page, browserName, viewportName) {
   await page.goto(`${baseUrl}/agent/atlas`, { waitUntil: "networkidle" });
   await page.waitForTimeout(400);
-  await captureFullPage(page, viewportName, "agent-atlas");
-  await validateNoOverflow(page, `${viewportName} profile`);
-  await validateLayering(page, `${viewportName} profile`);
+  await captureFullPage(page, browserName, viewportName, "agent-atlas");
+  await validateNoOverflow(page, `${browserName}/${viewportName} profile`);
+  await validateLayering(page, `${browserName}/${viewportName} profile`);
+  await validateAccessibility(page, `${browserName}/${viewportName} profile`);
 
   const banner = page.locator(".space-banner").first();
-  await validateSurfaceTone(page, banner, `${viewportName} profile banner`, "dark");
-  await measureContrast(page.locator('[data-contrast="agent-status-note"]').first(), `${viewportName} agent status note`);
-  await measureContrast(page.getByRole("link", { name: /back to feed/i }).first(), `${viewportName} profile back link`, {
-    min: 3
-  });
+  await validateSurfaceTone(page, banner, `${browserName}-${viewportName}-profile-banner`, "dark");
+  await measureContrast(page.locator('[data-contrast="agent-status-note"]').first(), `${browserName}/${viewportName} agent status note`);
+  await measureContrast(page.getByRole("link", { name: /back to feed/i }).first(), `${browserName}/${viewportName} profile back link`, { min: 3 });
 
   const firstInfoCard = page.locator(".space-window").filter({ has: page.getByText("Tools") }).first();
-  await validateSurfaceTone(page, firstInfoCard, `${viewportName} profile info card`, "light");
+  await validateSurfaceTone(page, firstInfoCard, `${browserName}-${viewportName}-profile-info-card`, "light");
 
-  const shareButton = page.getByRole("button", { name: /^share$/i }).first();
+  const shareButton = page.getByRole("button", { name: /share profile|share/i }).first();
   if (await shareButton.isVisible().catch(() => false)) {
     await shareButton.click();
     await page.waitForTimeout(200);
@@ -354,78 +375,84 @@ async function validateProfile(page, viewportName) {
     const response = await fetch(`${origin}/api/agents/atlas/follow`, { method: "POST" });
     return response.status;
   }, baseUrl);
-  assert([401, 503].includes(followStatus), `${viewportName} unauthenticated follow returned ${followStatus} instead of 401/503.`);
+  assert([401, 403, 503].includes(followStatus), `${browserName}/${viewportName} unauthenticated follow returned ${followStatus} instead of 401/403/503.`);
 }
-
-const browser = await chromium.launch({
-  headless: true,
-  executablePath
-});
 
 const failures = [];
 const summary = [];
 
-try {
-  for (const viewport of viewports) {
-    const context = await browser.newContext({
-      viewport: { width: viewport.width, height: viewport.height }
-    });
-    const page = await context.newPage();
-    const consoleErrors = [];
-    const failedRequests = [];
-    const httpFailures = [];
+for (const target of browserTargets) {
+  const browser = await target.engine.launch({
+    headless: true,
+    executablePath: target.executablePath
+  });
 
-    page.on("console", (msg) => {
-      if (msg.type() !== "error") return;
-      const text = msg.text();
-      if (isLocalBase && text.includes("/_vercel/speed-insights/script.js")) return;
-      if (/Failed to load resource: the server responded with a status of 401/i.test(text)) return;
-      if (isLocalBase && /Failed to load resource: the server responded with a status of 503/i.test(text)) return;
-      if (/Failed to load resource: the server responded with a status of 404/i.test(text)) return;
-      consoleErrors.push(text);
-    });
-    page.on("requestfailed", (request) => {
-      const url = request.url();
-      if (url.includes("_rsc=")) return;
-      if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
-      if (isLocalBase && request.method() === "POST" && /\/api\/(posts|agents)\//.test(url)) return;
-      failedRequests.push(`${request.method()} ${url} :: ${request.failure()?.errorText ?? "failed"}`);
-    });
-    page.on("response", (response) => {
-      const url = response.url();
-      if (!url.startsWith(baseUrl)) return;
-      const status = response.status();
-      const method = response.request().method();
-      if (url.includes("_rsc=")) return;
-      if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
-      if (status >= 400 && !(status === 401 && method === "POST") && !(isLocalBase && status === 503 && method === "POST")) {
-        httpFailures.push(`${status} ${method} ${url}`);
+  try {
+    for (const viewport of viewports) {
+      const context = await browser.newContext({
+        viewport: { width: viewport.width, height: viewport.height }
+      });
+      const page = await context.newPage();
+      const consoleErrors = [];
+      const failedRequests = [];
+      const httpFailures = [];
+
+      page.on("console", (msg) => {
+        if (msg.type() !== "error") return;
+        const text = msg.text();
+        if (isLocalBase && text.includes("/_vercel/speed-insights/script.js")) return;
+        if (/Failed to load resource: the server responded with a status of 401/i.test(text)) return;
+        if (/Failed to load resource: the server responded with a status of 403/i.test(text)) return;
+        if (isLocalBase && /Failed to load resource: the server responded with a status of 503/i.test(text)) return;
+        if (/Failed to load resource: the server responded with a status of 404/i.test(text)) return;
+        consoleErrors.push(text);
+      });
+
+      page.on("requestfailed", (request) => {
+        const url = request.url();
+        if (url.includes("_rsc=")) return;
+        if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
+        if (isLocalBase && request.method() === "POST" && /\/api\/(posts|agents|media)\//.test(url)) return;
+        failedRequests.push(`${request.method()} ${url} :: ${request.failure()?.errorText ?? "failed"}`);
+      });
+
+      page.on("response", (response) => {
+        const url = response.url();
+        if (!url.startsWith(baseUrl)) return;
+        const status = response.status();
+        const method = response.request().method();
+        if (url.includes("_rsc=")) return;
+        if (isLocalBase && url.includes("/_vercel/speed-insights/script.js")) return;
+        if (status >= 400 && !(status === 401 && method === "POST") && !(status === 403 && method === "POST") && !(isLocalBase && status === 503 && method === "POST")) {
+          httpFailures.push(`${status} ${method} ${url}`);
+        }
+      });
+
+      try {
+        await validateHome(page, target.name, viewport.name);
+        await validateSearch(page, target.name, viewport.name);
+        await validateProfile(page, target.name, viewport.name);
+      } catch (error) {
+        failures.push(`${target.name}/${viewport.name}: ${error instanceof Error ? error.message : String(error)}`);
       }
-    });
 
-    try {
-      await validateHome(page, viewport.name);
-      await validateSearch(page, viewport.name);
-      await validateProfile(page, viewport.name);
-    } catch (error) {
-      failures.push(`${viewport.name}: ${error instanceof Error ? error.message : String(error)}`);
+      if (consoleErrors.length) failures.push(`${target.name}/${viewport.name}: console errors -> ${consoleErrors.join(" | ")}`);
+      if (failedRequests.length) failures.push(`${target.name}/${viewport.name}: request failures -> ${failedRequests.join(" | ")}`);
+      if (httpFailures.length) failures.push(`${target.name}/${viewport.name}: http failures -> ${httpFailures.join(" | ")}`);
+
+      summary.push({
+        browser: target.name,
+        viewport: viewport.name,
+        consoleErrors: consoleErrors.length,
+        failedRequests: failedRequests.length,
+        httpFailures: httpFailures.length
+      });
+
+      await context.close();
     }
-
-    if (consoleErrors.length) failures.push(`${viewport.name}: console errors -> ${consoleErrors.join(" | ")}`);
-    if (failedRequests.length) failures.push(`${viewport.name}: request failures -> ${failedRequests.join(" | ")}`);
-    if (httpFailures.length) failures.push(`${viewport.name}: http failures -> ${httpFailures.join(" | ")}`);
-
-    summary.push({
-      viewport: viewport.name,
-      consoleErrors: consoleErrors.length,
-      failedRequests: failedRequests.length,
-      httpFailures: httpFailures.length
-    });
-
-    await context.close();
+  } finally {
+    await browser.close();
   }
-} finally {
-  await browser.close();
 }
 
 if (failures.length) {

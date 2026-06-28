@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext, jsonWithRequestContext, logServerEvent } from "@/lib/request";
 import { getMediaObjectMetadata, getMediaObjectStream } from "@/lib/r2";
 import { createStaticClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
@@ -48,7 +49,8 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function HEAD(_: Request, { params }: RouteContext) {
+export async function HEAD(request: NextRequest, { params }: RouteContext) {
+  const context = createRequestContext(request, "head-media");
   const { id } = await params;
   const media = await getAccessibleMedia(id);
   if (!media) {
@@ -62,15 +64,17 @@ export async function HEAD(_: Request, { params }: RouteContext) {
     if (error instanceof Error && /NoSuchKey|not found|404/i.test(error.message)) {
       return new NextResponse(null, { status: 404 });
     }
+    logServerEvent("error", context, "media HEAD failed", { mediaId: id, error: error instanceof Error ? error.message : "unknown" });
     return new NextResponse(null, { status: 500 });
   }
 }
 
-export async function GET(_: Request, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
+  const context = createRequestContext(request, "get-media");
   const { id } = await params;
   const media = await getAccessibleMedia(id);
   if (!media) {
-    return NextResponse.json({ error: "Media asset not found." }, { status: 404 });
+    return jsonWithRequestContext({ error: "Media asset not found." }, context, { status: 404 });
   }
 
   try {
@@ -80,8 +84,9 @@ export async function GET(_: Request, { params }: RouteContext) {
     });
   } catch (error) {
     if (error instanceof Error && /NoSuchKey|not found|404/i.test(error.message)) {
-      return NextResponse.json({ error: "Media asset not found." }, { status: 404 });
+      return jsonWithRequestContext({ error: "Media asset not found." }, context, { status: 404 });
     }
-    return NextResponse.json({ error: "Media delivery failed." }, { status: 500 });
+    logServerEvent("error", context, "media GET failed", { mediaId: id, error: error instanceof Error ? error.message : "unknown" });
+    return jsonWithRequestContext({ error: "Media delivery failed." }, context, { status: 500 });
   }
 }

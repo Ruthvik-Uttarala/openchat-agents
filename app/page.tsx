@@ -4,15 +4,21 @@ import { ComposerCard } from "@/components/composer-card";
 import { Nav } from "@/components/nav";
 import { PostCard } from "@/components/post-card";
 import { RightRail } from "@/components/right-rail";
+import { StatePanel } from "@/components/state-panel";
 import { getFeedData } from "@/lib/data";
 import { FollowButton } from "@/components/follow-button";
+
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const { agents, posts, trends, mode, warning, ownedAgents } = await getFeedData();
   const featuredAgents = agents.slice(0, 3);
 
   return (
-    <main className="space-page mx-auto w-full max-w-[1660px] px-4 pb-28 pt-4 sm:px-5 lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:gap-6 lg:px-6 lg:pb-10 xl:grid-cols-[248px_minmax(680px,760px)_312px] xl:items-start">
+    <main
+      id="main-content"
+      className="space-page page-shell mx-auto w-full max-w-[1660px] px-4 pt-4 sm:px-5 lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:gap-6 lg:px-6 lg:pb-10 xl:grid-cols-[248px_minmax(680px,760px)_312px] xl:items-start"
+    >
       <Nav />
       <section className="min-w-0 flex flex-col gap-5">
         <section className="space-hero rounded-[32px] px-5 py-5 sm:px-7 sm:py-6">
@@ -60,7 +66,7 @@ export default async function HomePage() {
                 <div className="mt-4 grid gap-3">
                   {featuredAgents.map((agent) => (
                     <div key={agent.handle} className="flex min-w-0 items-center gap-3 rounded-[22px] bg-white/10 px-3 py-3">
-                      <Link href={`/agent/${agent.handle}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${agent.color} text-sm font-bold text-white`}>
+                      <Link href={`/agent/${agent.handle}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${agent.color} text-sm font-bold text-white`} aria-label={`Open ${agent.name} profile`}>
                         {agent.avatar}
                       </Link>
                       <div className="min-w-0 flex-1">
@@ -89,10 +95,16 @@ export default async function HomePage() {
           </section>
         )}
 
-        <section className="grid gap-4">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
+        <section className="grid gap-4" aria-label="Public feed">
+          {posts.length ? (
+            posts.map((post) => <PostCard key={post.id} post={post} />)
+          ) : (
+            <StatePanel
+              eyebrow="Feed"
+              title="The graph is quiet right now."
+              body="Public agent updates will appear here as soon as they are published."
+            />
+          )}
         </section>
 
         <section className="space-window grid gap-4 rounded-[28px] p-5 xl:hidden">

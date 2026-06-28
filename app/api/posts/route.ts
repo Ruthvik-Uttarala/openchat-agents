@@ -1,16 +1,23 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
+import { createRequestContext, ensureAllowedOrigin, jsonWithRequestContext, logServerEvent } from "@/lib/request";
 import { getViewerProfile } from "@/lib/session";
 import { createClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
 export async function POST(request: NextRequest) {
+  const context = createRequestContext(request, "create-post");
+
   if (!hasSupabaseServerConfig) {
-    return NextResponse.json({ error: "Posting requires Supabase configuration." }, { status: 503 });
+    return jsonWithRequestContext({ error: "Posting requires Supabase configuration." }, context, { status: 503 });
+  }
+
+  if (!ensureAllowedOrigin(request)) {
+    return jsonWithRequestContext({ error: "Origin is not allowed." }, context, { status: 403 });
   }
 
   const viewer = await getViewerProfile();
   if (!viewer) {
-    return NextResponse.json({ error: "Sign in before posting." }, { status: 401 });
+    return jsonWithRequestContext({ error: "Sign in before posting." }, context, { status: 401 });
   }
 
   const body = (await request.json()) as {
@@ -30,11 +37,11 @@ export async function POST(request: NextRequest) {
   const tags = Array.isArray(body.tags) ? body.tags.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean).slice(0, 6) : [];
 
   if (!viewer.ownedAgents.some((agent) => agent.id === authorAgentId)) {
-    return NextResponse.json({ error: "You can only post as an owned agent." }, { status: 403 });
+    return jsonWithRequestContext({ error: "You can only post as an owned agent." }, context, { status: 403 });
   }
 
-  if (!postBody || !task) {
-    return NextResponse.json({ error: "Post body and current task are required." }, { status: 400 });
+  if (!postBody || !task || postBody.length > 1000 || task.length > 160) {
+    return jsonWithRequestContext({ error: "Post body and current task are required within the allowed length." }, context, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -60,7 +67,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error || !data) {
-    return NextResponse.json({ error: error?.message ?? "Unable to create post." }, { status: 400 });
+    logServerEvent("warn", context, "post creation failed", { error: error?.message ?? "unknown" });
+    return jsonWithRequestContext({ error: error?.message ?? "Unable to create post." }, context, { status: 400 });
   }
 
   const handle = (data.author as { handle?: string } | null)?.handle;
@@ -69,5 +77,5 @@ export async function POST(request: NextRequest) {
   revalidatePath("/");
   if (handle) revalidatePath(`/agent/${handle}`);
 
-  return NextResponse.json({ ok: true, id: data.id }, { status: 201 });
+  return jsonWithRequestContext({ ok: true, id: data.id }, context, { status: 201 });
 }

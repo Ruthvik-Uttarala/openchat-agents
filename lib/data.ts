@@ -2,8 +2,9 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 import { getCurrentUser } from "@/lib/session";
+import { rankAgents, rankPosts, rankTrends } from "@/lib/search";
 import { agents as seedAgents, posts as seedPosts, searchSeed, trends as seedTrends } from "./seed-data";
-import type { Agent, MediaAsset, OwnedAgent, Post, PostSection, Reply, Trend, ViewerState } from "./types";
+import type { Agent, MediaAsset, OwnedAgent, Post, PostSection, Reply, Trend } from "./types";
 import { createClient, createStaticClient, hasSupabaseServerConfig } from "@/utils/supabase/server";
 
 type DataMode = "supabase" | "seed";
@@ -278,6 +279,18 @@ function normalizeRpcTrends(trends: Trend[]) {
   });
 }
 
+function sortAgentsStable(agents: Agent[]) {
+  return [...agents].sort((left, right) => right.followersCount - left.followersCount || left.name.localeCompare(right.name));
+}
+
+function sortPostsStable(posts: Post[]) {
+  return [...posts].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime() || left.id.localeCompare(right.id));
+}
+
+function dedupeById<T extends { id: string }>(items: T[]) {
+  return Array.from(new Map(items.map((item) => [item.id, item])).values());
+}
+
 function toPost(
   row: PostRow,
   agentMap: Map<string, Agent>,
@@ -486,10 +499,10 @@ async function readPublicFeedFromSupabase(options: FeedOptions = {}): Promise<Fe
     repliesByPostId.set(row.post_id, existing);
   }
 
-  const posts = postRows.map((row) => toPost(row, agentMap, repliesByPostId, viewer)).filter(Boolean) as Post[];
+  const posts = sortPostsStable(dedupeById(postRows.map((row) => toPost(row, agentMap, repliesByPostId, viewer)).filter(Boolean) as Post[]));
 
   return {
-    agents,
+    agents: sortAgentsStable(dedupeById(agents)),
     posts,
     trends: buildTrendsFromPosts(posts),
     ownedAgents: viewer.ownedAgents,
@@ -548,34 +561,19 @@ export async function getSearchData(query: string, options: FeedOptions = {}) {
   if (rpcResult) {
     const agentIdSet = new Set(rpcResult.agents);
     const postIdSet = new Set(rpcResult.posts);
+    const rankedAgents = rankAgents(feed.agents.filter((agent) => agentIdSet.has(agent.id)), q);
+    const rankedPosts = rankPosts(feed.posts.filter((post) => postIdSet.has(post.id)), q);
 
     return {
-      agents: feed.agents.filter((agent) => agentIdSet.has(agent.id)),
-      posts: feed.posts.filter((post) => postIdSet.has(post.id)),
-      trends: rpcResult.trends.length ? rpcResult.trends : feed.trends.filter((trend) => [trend.name, trend.query].join(" ").toLowerCase().includes(q)),
+      agents: rankedAgents,
+      posts: rankedPosts,
+      trends: rpcResult.trends.length ? rankTrends(rpcResult.trends, q) : rankTrends(feed.trends, q),
       mode: feed.mode,
       warning: feed.warning
     };
   }
 
-  const fallbackSearch = q
-    ? {
-        agents: feed.agents.filter((agent) =>
-          ((q === "tool" || q === "tools") && agent.tools.length > 0) ||
-          [agent.name, agent.handle, agent.role, agent.bio, agent.statusNote ?? "", ...agent.stack, ...agent.tools, ...agent.capabilities]
-            .join(" ")
-            .toLowerCase()
-            .includes(q)
-        ),
-        posts: feed.posts.filter((post) =>
-          [post.body, post.task, post.status, ...post.tags, ...post.sections.map((section) => JSON.stringify(section)), ...post.citations.map((citation) => citation.label)]
-            .join(" ")
-            .toLowerCase()
-            .includes(q)
-        ),
-        trends: feed.trends.filter((trend) => [trend.name, trend.query].join(" ").toLowerCase().includes(q))
-      }
-    : searchSeed("");
+  const fallbackSearch = q ? { agents: rankAgents(feed.agents, q), posts: rankPosts(feed.posts, q), trends: rankTrends(feed.trends, q) } : searchSeed("");
 
   return { ...fallbackSearch, mode: feed.mode, warning: feed.warning };
 }

@@ -25,7 +25,7 @@ export function Nav() {
 
   return (
     <>
-      <aside className="space-rail hidden h-[calc(100vh-48px)] w-[248px] shrink-0 lg:block">
+      <aside className="space-rail hidden h-[calc(100vh-48px)] w-[248px] shrink-0 lg:block" aria-label="Primary navigation">
         <div className="flex h-full flex-col gap-6 p-5">
           <Link href="/" className="flex items-center gap-3 text-white">
             <LogoMark />
@@ -35,7 +35,7 @@ export function Nav() {
             </div>
           </Link>
 
-          <nav className="grid gap-2">
+          <nav className="grid gap-2" aria-label="Primary">
             {items.map((item) => {
               const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
               return (
@@ -64,7 +64,7 @@ export function Nav() {
         </div>
       </aside>
 
-      <nav className="mobile-nav lg:hidden">
+      <nav className="mobile-nav lg:hidden" aria-label="Mobile navigation">
         {items.map((item) => {
           const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
@@ -81,7 +81,7 @@ export function Nav() {
             </Link>
           );
         })}
-        <Link href="/llms.txt" className="flex flex-1 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-[11px] font-semibold text-white/70">
+        <Link href="/llms.txt" className="flex flex-1 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-[11px] font-semibold text-white/70" aria-label="LLMS route">
           <Sparkles size={18} />
           LLMS
         </Link>
